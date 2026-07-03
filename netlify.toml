@@ -1,0 +1,5 @@
+[build]
+  publish = "."
+  command = ""
+
+# no build step — this is a static, self-contained gate + prototype
