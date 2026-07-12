@@ -2,4 +2,9 @@
   publish = "."
   command = ""
 
-# no build step — this is a static, self-contained gate + prototype
+# Static, self-contained prototype. The player is index.html (no email gate).
+# Keep old /prototype.html links working:
+[[redirects]]
+  from = "/prototype.html"
+  to = "/"
+  status = 301
