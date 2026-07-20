@@ -8,3 +8,11 @@
   from = "/prototype.html"
   to = "/"
   status = 301
+
+# Always revalidate the app HTML so a new deploy shows up on a normal refresh
+# (no hard-refresh or incognito needed). Netlify's ETag makes that a cheap 304
+# when nothing changed, and a full fetch only when the file actually changed.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
