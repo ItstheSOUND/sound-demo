@@ -17,17 +17,20 @@
     /* content surfaces — LIGHT (default) */
     --bg:#f5f5f5; --card:#ffffff; --card2:#eef1f4; --ink:#1a1a1a; --mute:#5b6472; --line:#e3e7ec; --field:#767d8a;
     --accent-ink:#1f5486; --warm-ink:#93540f;
+    --warn:#a3330a;   /* unfiled-split flag; AA on the light surface */
   }
   /* DARK — when the OS prefers it (System mode) or the user forces Dark */
   @media (prefers-color-scheme: dark){
     :root:not([data-theme="light"]):not([data-theme="dark"]){
       --bg:#17110f; --card:#241a15; --card2:#2c211a; --ink:#f3ece7; --mute:#a99a90; --line:#34261e; --field:#8a8078;
       --accent-ink:#a9cdec; --warm-ink:#f2c290;
+      --warn:#f9a273;   /* same flag, lightened so it clears AA on the dark surface */
     }
   }
   :root[data-theme="dark"]{
     --bg:#17110f; --card:#241a15; --card2:#2c211a; --ink:#f3ece7; --mute:#a99a90; --line:#34261e; --field:#8a8078;
     --accent-ink:#a9cdec; --warm-ink:#f2c290;
+    --warn:#f9a273;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;}
@@ -141,6 +144,27 @@
   .studioui .sform>label{font-size:.8em;font-weight:600;color:var(--mute);letter-spacing:.02em;margin:0 0 5px;}
   .studioui input[type=file]{font:inherit;color:var(--mute);max-width:100%;}
   .studioui button{min-height:44px;}
+  /* Songwriting splits, captured at upload rather than as a later errand. */
+  .studioui .wrtblk{border:1px solid var(--field);border-left:3px solid var(--warm-accent);
+    border-radius:10px;padding:13px 14px 15px;background:var(--card);}
+  .studioui .wrthead{font-family:'Space Grotesk';font-weight:700;color:var(--warm-accent);margin:0 0 4px;}
+  .studioui .wrtnote{font-size:.82em;color:var(--mute);line-height:1.5;margin:0 0 11px;}
+  .studioui .wrow{display:flex;gap:8px;align-items:center;margin:0 0 8px;}
+  .studioui .wrow .wname{flex:1 1 auto;min-width:0;}
+  .studioui .wrow .wshare{width:74px;flex:0 0 auto;text-align:right;}
+  /* .mini sets min-height:0, which would leave these at 26px while every other
+     button in the Studio is 44. Match the surrounding standard, which also clears
+     the WCAG 2.5.5 target size. */
+  .studioui .wrtblk button.mini{min-height:44px;min-width:44px;padding:4px 12px;flex:0 0 auto;}
+  .studioui .wrow button.mini{padding:4px 10px;}
+  .studioui .tally{font-size:.82em;font-weight:600;color:var(--mute);}
+  .studioui .tally.ok{color:var(--warm-accent);}
+  .studioui .tally.bad{color:var(--warn);}
+  .studioui .pubrow{display:flex;gap:10px;align-items:baseline;padding:9px 4px;border-bottom:1px solid var(--line);}
+  .studioui .pubrow:last-child{border-bottom:0;}
+  .studioui .pubrow .st{font-size:.8em;font-weight:600;flex:0 0 auto;}
+  .studioui .pubrow .st.no{color:var(--warn);}
+  .studioui .pubrow .st.yes{color:var(--warm-accent);}
   .studioui button.mini{min-height:0;}
   /* progressive disclosure: each "add" form is a native <details> with a button-styled summary */
   .studioui details.addblock{margin-top:14px;}
@@ -869,7 +893,8 @@
       if(p.indexOf("/studio/")===0 && p.slice(-7)==="/tracks"){ const b=body(opts);
         store.studio.tracks.push({track_id:b.track_id,artist_id:ARTIST,title:b.title,duration_seconds:b.duration_seconds,
           album_id:b.album_id||null,track_number:b.track_number||null,tags:(b.tags||[]).slice(0,3),
-          artwork_url:b.artwork_url||null,has_lyrics:!!b.lyrics,audio_uploaded:false}); save(); return resp({ok:true}); }
+          artwork_url:b.artwork_url||null,has_lyrics:!!b.lyrics,audio_uploaded:false,
+          writers:(b.writers||[])}); save(); return resp({ok:true}); }
       if(p.indexOf("/studio/")===0 && p.slice(-7)==="/albums"){ const b=body(opts);
         store.studio.albums.push({album_id:b.album_id,artist:D.creds.artist,title:b.title,track_count:0}); save(); return resp({ok:true}); }
       if(p.indexOf("/artists/")===0 && p.slice(-6)==="/merch"){ const b=body(opts);
@@ -1487,6 +1512,8 @@ async function viewStudio(v){
     <div id="tfa" class="sub" style="margin:2px 0 0"></div>
     ${earnHtml}
 
+    <div class="sec" id="pubpanel"></div>
+
     <div class="sec"><div class="head"><h3 style="color:var(--warm-accent)">Profile</h3></div>
       <div class="sform">
         <label for="pfBio">Bio</label><textarea id="pfBio" rows="3" style="${IST}">${esc(d.bio||"")}</textarea>
@@ -1508,6 +1535,17 @@ async function viewStudio(v){
         <textarea id="tkLyrics" rows="2" style="${IST}" placeholder="lyrics (optional)"></textarea>
         <label style="font-size:.85em;color:var(--mute)">Album art <input id="tkArt" type="file" accept="image/*"></label>
         <label style="font-size:.85em;color:var(--mute)">Audio file <input id="tkAudio" type="file" accept="audio/*"></label>
+
+        <div class="wrtblk">
+          <div class="wrthead">Who wrote it</div>
+          <p class="wrtnote">Recording royalties and songwriting royalties are two different pots of money. You are filling in the second one here, while you are already thinking about the song. Most services make you do this later somewhere else, which is why so much of it is never claimed.</p>
+          <div id="tkWriters"></div>
+          <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
+            <button type="button" class="ghost mini" onclick="addWriterRow()">＋ Add writer</button>
+            <span id="tkSplitTally" class="tally"></span>
+          </div>
+        </div>
+
         <div><button onclick="addTrack()">Add track</button> <button class="ghost" onclick="addAlbum()">＋ New album</button></div>
       </div></details>
     </div>
@@ -1561,6 +1599,73 @@ async function viewStudio(v){
           : `Two-factor <b style="color:var(--warm-accent)">on ✓</b> · <input placeholder="6-digit code" style="width:120px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)" oninput="window.__2fa=this.value.trim()">`)
       : `Two-factor <b>off</b> · <button class="ghost mini" onclick="enroll2fa()">Enable 2FA</button>`;
   }catch(e){}
+  if($("#tkWriters") && !writerRows().length) addWriterRow();
+  window.__studioTracks=d.tracks||[];
+  renderPublishing(d);
+}
+
+// --- Publishing -------------------------------------------------------------
+// Songwriting royalties are a separate pot from the recording payout, and they are
+// the biggest single deduction from a subscription. For an artist who wrote their
+// own song they come back — but only if a registration exists. This panel shows
+// which of their works have a writer split on file and what that is worth, using
+// the demo's own published figures rather than an invented number.
+function publishingRatio(){
+  // songwriter share as a fraction of the recording pool, derived from the demo's
+  // own transparency month: statutory rate over pool share.
+  try{
+    // D is scoped inside the fetch shim; the raw payload is the global.
+    const raw=(window.__SOUND_DATA__&&window.__SOUND_DATA__.get&&window.__SOUND_DATA__.get["/transparency/latest"])||{};
+    const t=Array.isArray(raw)?(raw[0]||{}):raw;
+    const subs=Number(t.subscribers||0), price=10.99, PRO=0.153;
+    const costs=(t.operating_costs||[]).reduce((s,c)=>s+Number(c.amount||0),0);
+    const rev=subs*price; if(!rev||!costs) return null;
+    const pool=Math.max(rev-rev*PRO-costs,0); if(!pool) return null;
+    return {ratio:(rev*PRO)/pool, poolPct:pool/rev*100, proPct:PRO*100};
+  }catch(e){ return null; }
+}
+function renderPublishing(d){
+  const host=$("#pubpanel"); if(!host) return;
+  const tracks=d.tracks||[];
+  const withSplits=tracks.filter(t=>(t.writers||[]).length);
+  const r=publishingRatio();
+  const rows=tracks.length ? tracks.map(t=>{
+    const w=(t.writers||[]);
+    return `<div class="pubrow">
+      <span class="st ${w.length?"yes":"no"}">${w.length?"split on file":"no split"}</span>
+      <span style="flex:1 1 auto;min-width:0">${esc(t.title)}</span>
+      <span style="color:var(--mute);font-size:.82em">${w.length?esc(w.map(x=>x.name+" "+x.share+"%").join(", ")):"nobody is registered to collect on this"}</span>
+    </div>`;}).join("") : `<div class="empty">No tracks yet.</div>`;
+  const ratioLine = r ? `<div class="note">On this month's published accounting, ${r.poolPct.toFixed(1)}% of a subscription reaches the artist pool and a further ${r.proPct.toFixed(1)}% is songwriter money paid out to the PROs and the MLC. That works out to roughly <b>$${r.ratio.toFixed(2)} of songwriting royalties for every $1.00</b> you earn from streaming here, generated by the very same plays. It goes to whoever is registered to collect it. If that is not you, it is not being held for you.</div>` : "";
+  host.innerHTML = `
+    <div class="head"><h3 style="color:var(--warm-accent)">Songwriting royalties</h3></div>
+    <div class="ledger" style="max-width:640px">${rows}</div>
+    ${ratioLine}
+    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="ghost" onclick="previewCwr()">Preview registration file</button>
+    </div>
+    <div class="note">${withSplits.length} of ${tracks.length} track${tracks.length===1?"":"s"} have a writer split on file. Illustrative and prelaunch: SOUND does not file anything on your behalf today, and this demo is not connected to the MLC.</div>`;
+}
+function previewCwr(){
+  const rows=(window.__studioTracks||[]).filter(t=>(t.writers||[]).length);
+  if(!rows.length){ toast("Add a track with a writer split first"); return; }
+  const pad=(v,n)=>String(v==null?"":v).padEnd(n).slice(0,n);
+  const body=rows.map(t=>(t.writers||[]).map(w=>
+    "  "+pad(t.title,28)+"  "+pad(w.name,22)+"  "+String(w.share).padStart(5)+"%"
+  ).join("\n")).join("\n");
+  const head="  "+pad("WORK",28)+"  "+pad("WRITER",22)+"  SHARE\n  "
+    +"-".repeat(28)+"  "+"-".repeat(22)+"  -----\n";
+  const dlg=document.createElement("dialog");
+  dlg.innerHTML="<h3 style=\"margin:0 0 6px;font-family:'Space Grotesk';color:var(--warm-accent)\">Registration file, preview</h3>"
+    +"<p style=\"margin:0 0 12px;line-height:1.5;font-size:.9em\">Built from the splits you already entered while uploading. A real filing uses the industry CWR format; this shows the same information in a readable shape.</p>"
+    +"<pre style=\"margin:0 0 16px;padding:12px;background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:auto;font-size:.82em;line-height:1.6\">"
+    +esc(head+body)+"</pre>"
+    +"<div class=\"dlgfoot\"><button class=\"ghost\" data-a=\"close\">Close</button></div>";
+  document.body.appendChild(dlg);
+  const fin=()=>{ try{dlg.close();}catch(e){} dlg.remove(); };
+  dlg.querySelector('[data-a="close"]').onclick=fin;
+  dlg.addEventListener("cancel",e=>{ e.preventDefault(); fin(); });
+  dlg.showModal(); dlg.querySelector('[data-a="close"]').focus();
 }
 async function saveProfile(){ const a=artistCreds();
   const links={}; ($("#pfLinks").value||"").split(",").forEach(p=>{ const i=p.indexOf("="); if(i>0) links[p.slice(0,i).trim()]=p.slice(i+1).trim(); });
@@ -1573,9 +1678,58 @@ async function addAlbum(){ const a=artistCreds(); const title=prompt("Album titl
   const r=await apost("/studio/"+encodeURIComponent(a.id)+"/albums",{album_id:id,title:title.trim()});
   toast(r.ok?"Album created":"Couldn't create album"); if(r.ok) route();
 }
+// --- Songwriting splits -----------------------------------------------------
+// Captured at upload, deliberately, rather than as a separate errand afterwards.
+// The writer split is what a mechanical-rights registration needs; collecting it
+// here is what makes it possible to hand an artist a ready-to-file CWR later.
+function writerRows(){ return Array.from(document.querySelectorAll("#tkWriters .wrow")); }
+function addWriterRow(name, share){
+  const host=$("#tkWriters"); if(!host) return;
+  const i=writerRows().length;
+  const d=document.createElement("div");
+  d.className="wrow";
+  d.innerHTML=`<input type="text" class="wname" placeholder="writer's legal name" value="${esc(name||"")}" aria-label="Writer name">`
+    +`<input type="text" class="wshare" inputmode="decimal" placeholder="%" value="${share==null?"":esc(String(share))}" aria-label="Writer share, percent">`
+    +`<button type="button" class="ghost mini" aria-label="Remove this writer" onclick="this.parentNode.remove();tallySplits()">×</button>`;
+  host.appendChild(d);
+  d.querySelectorAll("input").forEach(el=>el.addEventListener("input",tallySplits));
+  if(i===0 && !name){ d.querySelector(".wname").value=(currentArtistName()||""); d.querySelector(".wshare").value="100"; }
+  tallySplits();
+}
+function currentArtistName(){ const h=document.querySelector(".studioui h2.section"); if(!h) return ""; return (h.textContent||"").replace(/^Studio\s*—\s*/,"").replace(/✓ Verified|Founding/g,"").trim(); }
+function splitTotal(){ return writerRows().reduce((s,r)=>s+(parseFloat(r.querySelector(".wshare").value)||0),0); }
+function tallySplits(){
+  const el=$("#tkSplitTally"); if(!el) return;
+  const t=splitTotal(), named=writerRows().filter(r=>(r.querySelector(".wname").value||"").trim()).length;
+  if(!named){ el.textContent=""; el.className="tally"; return; }
+  // A share outside 0-100 is invalid on its own, even when the total happens to
+  // reach 100 (150 and -50 do). Say so here rather than at save time.
+  const shares=writerRows().map(r=>parseFloat(r.querySelector(".wshare").value)||0);
+  const outOfRange=shares.some(s=>s<0||s>100);
+  const ok=!outOfRange && Math.abs(t-100)<0.01;
+  el.textContent=outOfRange ? "each share must be 0–100%"
+                            : (ok?"✓ ":"")+t.toFixed(t%1?2:0)+"% of 100%";
+  el.className="tally"+(ok?" ok":" bad");
+}
+function collectWriters(){
+  return writerRows().map(r=>({name:(r.querySelector(".wname").value||"").trim(),
+                               share:parseFloat(r.querySelector(".wshare").value)||0}))
+                     .filter(w=>w.name);
+}
+
 async function addTrack(){ const a=artistCreds();
   const title=($("#tkTitle").value||"").trim();
   if(!title){ toast("A title is required"); return; }
+  const writers=collectWriters();
+  if(writers.length){
+    // Each share has to be a real slice on its own. Without this, 150% and -50%
+    // total 100 and would sail through, and a negative share is meaningless in a
+    // registration.
+    const bad=writers.find(w=>!(w.share>0)||w.share>100);
+    if(bad){ toast("Each writer's share has to be between 0 and 100% — "+bad.name+" is "+bad.share+"%"); return; }
+    if(Math.abs(splitTotal()-100)>0.01){
+      toast("Writer splits have to add up to 100% — right now they total "+splitTotal()+"%"); return; }
+  }
   // track id is auto-generated from the title (slug + short suffix) — artists never see or type it.
   // Slug is [a-z0-9-] and the base36 suffix keeps it ^[A-Za-z0-9_-]+$, closing the attribute-injection vector.
   const slug=title.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,32)||"track";
@@ -1584,7 +1738,7 @@ async function addTrack(){ const a=artistCreds();
   const tid=slug+"-"+Date.now().toString(36)+"-"+rand;
   const tags=($("#tkGenres").value||"").split(",").map(s=>s.trim()).filter(Boolean).slice(0,3);
   const art=await fileToDataUrl($("#tkArt"));
-  const body={track_id:tid,title:title,duration_seconds:parseInt($("#tkDur").value||"180",10)||180,album_id:$("#tkAlbum").value||null,track_number:$("#tkNum").value?parseInt($("#tkNum").value,10):null,tags:tags,lyrics:$("#tkLyrics").value||null,artwork_url:art};
+  const body={track_id:tid,title:title,duration_seconds:parseInt($("#tkDur").value||"180",10)||180,album_id:$("#tkAlbum").value||null,track_number:$("#tkNum").value?parseInt($("#tkNum").value,10):null,tags:tags,lyrics:$("#tkLyrics").value||null,artwork_url:art,writers:writers};
   const r=await apost("/studio/"+encodeURIComponent(a.id)+"/tracks",body);
   if(!r.ok){ const e=await r.json().catch(()=>({})); toast(e.detail||"Couldn't save track"); return; }
   const af=$("#tkAudio"); if(af&&af.files&&af.files[0]){ try{ const h2=await art2faHeader(); const buf=await af.files[0].arrayBuffer(); await fetch("/studio/"+encodeURIComponent(a.id)+"/tracks/"+encodeURIComponent(tid)+"/audio",{method:"PUT",headers:artistHeaders(h2),body:buf}); }catch(e){} }
