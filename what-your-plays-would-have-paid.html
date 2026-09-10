@@ -71,6 +71,13 @@ footer p{color:var(--pc-mute);}
   border:1.5px solid var(--pc-border);border-radius:8px;background:var(--pc-field-bg);color:var(--pc-ink);}
 .pc input[type=text]::placeholder{color:var(--pc-mute);}
 .pc input[aria-invalid=true]{border-color:var(--pc-err);border-width:2px;}
+/* The app's field system gives every text input an amber ring at 35 percent
+   alpha on focus (input[type=text]:focus-visible, specificity 0,2,1), which
+   measured 1.3:1 against the light card and 2.1:1 against the dark one on
+   the live route, under the 3:1 of WCAG 2.1 AA 1.4.11. This outranks it
+   (0,3,1), so the calculator's inputs keep the same 3 px ring as its other
+   controls in both shells. */
+.pc input[type=text]:focus-visible{outline:3px solid var(--pc-focus);outline-offset:3px;box-shadow:none;}
 .pc .pc-err{color:var(--pc-err);font-weight:600;font-size:.95rem;margin:.4rem 0 0;}
 .pc .pc-err:empty{display:none;}
 .pc fieldset{border:0;padding:0;margin:0 0 .5rem;}
