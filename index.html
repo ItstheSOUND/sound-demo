@@ -2100,7 +2100,7 @@ async function viewTransparency(v){
     $("#tr").innerHTML=`<div class="ledger"><div style="font-family:'Space Grotesk';font-weight:700;color:var(--warm-accent);padding:12px 6px">${esc(r.month||"")}</div>`
       + rows.map(([k,val,em])=>`<div class="lrow ${em?'em':''}"><span>${k}</span><span>${val}</span></div>`).join("")
       + (costs?`<div style="color:var(--mute);font-size:.85em;padding:12px 6px 2px">Operating costs, itemized</div>`+costs:"")
-      + `</div><div class="note"><b>Public vs. private.</b> The accounting, the per-stream rate, the formula, and the open-source engine are public so anyone can verify the math. Each artist's own earnings are private to their dashboard — no leaderboard of paychecks.</div>`;
+      + `</div><div class="note"><b>Public vs. private.</b> The accounting, the per-stream rate, the formula, and the open-source engine are public so anyone can verify the math. Each artist's own earnings are private to their dashboard — no leaderboard of paychecks.</div><div class="note"><b>Make music?</b> Type the streams and listeners your dashboard shows for a month and watch the same plays computed at this rate, with the arithmetic printed underneath: <a href="/what-your-plays-would-have-paid.html" style="color:var(--warm-accent)">What your plays would have paid →</a></div>`;
   }catch(e){
     $("#tr").innerHTML=`<div class="note">No monthly report published yet. Once SOUND is operating, every month this page will show gross revenue, itemized costs, the artist pool, the per-stream rate, and total streams — reviewed by an independent CPA, at a no-login URL, permanently archived.</div>`;
   }
