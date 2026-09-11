@@ -28,6 +28,7 @@
     /* content surfaces — LIGHT (default) */
     --bg:#f5f5f5; --card:#ffffff; --card2:#eef1f4; --ink:#1a1a1a; --mute:#5b6472; --line:#e3e7ec; --field:#767d8a;
     --accent-ink:#1f5486; --warm-ink:#93540f;
+    --focus-ring:var(--blue);                                /* every keyboard focus ring; 5.4:1 on white */
     --warn:#a3330a;   /* unfiled-split flag; AA on the light surface */
   }
   /* DARK — when the OS prefers it (System mode) or the user forces Dark */
@@ -35,12 +36,14 @@
     :root:not([data-theme="light"]):not([data-theme="dark"]){
       --bg:#17110f; --card:#241a15; --card2:#2c211a; --ink:#f3ece7; --mute:#a99a90; --line:#34261e; --field:#8a8078;
       --accent-ink:#a9cdec; --warm-ink:#f2c290;
+      --focus-ring:var(--blue-soft);                         /* 9.4:1 on the dark card */
       --warn:#f9a273;   /* same flag, lightened so it clears AA on the dark surface */
     }
   }
   :root[data-theme="dark"]{
     --bg:#17110f; --card:#241a15; --card2:#2c211a; --ink:#f3ece7; --mute:#a99a90; --line:#34261e; --field:#8a8078;
     --accent-ink:#a9cdec; --warm-ink:#f2c290;
+    --focus-ring:var(--blue-soft);
     --warn:#f9a273;
   }
   *{box-sizing:border-box;}
@@ -76,8 +79,9 @@
   .acct .jar{background:rgba(235,161,94,.16);color:var(--amber-soft);border:1px solid rgba(235,161,94,.55);}
   .acct .jar:hover{background:rgba(235,161,94,.28);color:#fff;}
   .themebar{display:flex;gap:6px;margin-top:10px;}
-  .thm{background:transparent;color:#c9bab0;border:1px solid var(--line);font-size:.72em;padding:5px 8px;border-radius:7px;font-weight:600;}
+  .thm{background:transparent;color:#c9bab0;border:1px solid var(--line);font-size:.72em;padding:6px 8px;min-height:24px;border-radius:7px;font-weight:600;}
   .thm.active{background:var(--blue);color:#fff;border-color:var(--blue);}
+  .thm:hover{color:#fff;}
 
   /* main — flows in the normal document; bottom pad clears the fixed player bar */
   main{padding:24px 32px 128px;}   /* fills the grid column full-width on desktop */
@@ -92,9 +96,9 @@
   /* ---- app-wide form controls: one unified field system ---- */
   textarea,select{width:100%;padding:11px 14px;border:1px solid var(--field);border-radius:10px;font:inherit;background:var(--card);color:var(--ink);box-sizing:border-box;}
   input[type=text],textarea,select{min-height:44px;transition:box-shadow .15s ease,border-color .15s ease;}
-  /* focus = amber ring via box-shadow (border-color is pinned to --field by the WCAG rule above) */
-  input[type=text]:focus,textarea:focus,select:focus,
-  input[type=text]:focus-visible,textarea:focus-visible,select:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(235,161,94,.35);}
+  /* keyboard focus = the theme's 3 px ring, the same one every other control wears; the
+     35-percent amber halo it replaced measured 1.26:1 on the light ground (WCAG 1.4.11) */
+  input[type=text]:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid var(--focus-ring);outline-offset:2px;box-shadow:none;}
   /* native file inputs -> a real outline-button, app-wide */
   input[type=file]::file-selector-button{font:600 .88em/1 inherit;margin-right:10px;padding:9px 13px;border:1px solid var(--accent-ink);border-radius:9px;background:transparent;color:var(--accent-ink);cursor:pointer;transition:background .12s ease,color .12s ease;}
   input[type=file]::file-selector-button:hover{background:var(--accent-ink);color:var(--card);}
@@ -114,6 +118,7 @@
   h2.section{font-size:1.55em;margin:8px 0 4px;color:var(--ink);}
   h3{color:var(--warm-ink);}
   .sub{color:var(--mute);margin:0 0 18px;}
+  .note a,.sub a,.vmeta a{text-decoration:underline;text-underline-offset:.15em;}   /* 1.4.1: never color alone */
 
   /* hero — the 9:30 Club lights */
   .hero{position:relative;border-radius:16px;overflow:hidden;margin:0 0 24px;padding:40px 32px;
@@ -136,7 +141,7 @@
   .chips-sticky{position:sticky;top:0;z-index:3;background:var(--bg);padding:10px 0 8px;margin-bottom:10px;}
   .chips-styles{margin:-2px 0 14px;}
   .chip .chip-n{opacity:.8;font-weight:500;margin-left:4px;}
-  .chip{background:var(--card2);color:var(--ink);border-radius:999px;padding:6px 13px;font-size:.82em;font-weight:600;text-decoration:none;cursor:pointer;}
+  .chip{background:var(--card2);color:var(--ink);border-radius:999px;padding:6px 13px;min-height:24px;display:inline-flex;align-items:center;font-size:.82em;font-weight:600;text-decoration:none;cursor:pointer;}
   .chip.on{background:var(--amber);color:#2a1a0c;}
   .head{display:flex;align-items:baseline;justify-content:space-between;margin:0 0 14px;padding-top:22px;border-top:1px solid var(--line);}
   .head:first-of-type{border-top:0;padding-top:6px;}
@@ -238,7 +243,7 @@
            width:30px;height:30px;border-radius:9px;background:rgba(0,0,0,.55);color:#fff;opacity:0;transition:opacity .15s;}
   .arthero .arthint svg{width:17px;height:17px;display:block;}
   .arthero:hover .arthint,.arthero:focus-visible .arthint{opacity:1;}
-  .arthero:focus-visible{outline:none;box-shadow:0 0 0 3px var(--amber),0 12px 34px rgba(0,0,0,.30);}
+  .arthero:focus-visible{outline:none;box-shadow:0 0 0 3px var(--focus-ring),0 12px 34px rgba(0,0,0,.30);}
   /* Full-size cover lightbox */
   .artdlg{max-width:none;max-height:none;width:auto;background:transparent;border:0;box-shadow:none;padding:0;overflow:visible;}
   .artdlg::backdrop{background:rgba(6,5,4,.88);}
@@ -249,8 +254,8 @@
   .artclose{position:fixed;top:16px;right:18px;width:40px;height:40px;border-radius:11px;border:1px solid rgba(255,255,255,.22);
             background:rgba(0,0,0,.5);color:#fff;cursor:pointer;font-size:1.1em;line-height:1;display:flex;align-items:center;justify-content:center;}
   .artclose:hover{background:rgba(0,0,0,.72);}
-  .artclose:focus-visible{outline:none;box-shadow:0 0 0 3px var(--amber);}
-  .cardv .ct{font-weight:600;margin-top:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .artclose:focus-visible{outline:none;box-shadow:0 0 0 3px var(--focus-ring);}
+  .cardv .ct{font-weight:600;margin-top:9px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
   a.ct{display:block;color:inherit;text-decoration:none;}
   a.ct:hover{text-decoration:underline;}
   .cardv .cs{color:var(--mute);font-size:.84em;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -266,7 +271,9 @@
   .vcell.vdead .vdeadnote{display:block;}
   .vlock{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#211d1a,#2c2622);}
   .vlockinner{text-align:center;padding:10px;}
-  .vlockic{font-size:1.5em;opacity:.65;margin-bottom:10px;}
+  .vlockic{font-size:1.5em;color:#e0d6cc;margin-bottom:10px;}
+  .vlocktext{color:#d9cfc6;font-size:.82em;}                       /* 10:1 on the panel */
+  .vlock .ghost{color:#a9cdec;border-color:#a9cdec;}               /* 9.4:1 on the panel */
   .vmeta{margin-top:4px;}
   /* reserve a consistent title-block height — a $5 Show's badge can wrap it to 2 lines while a
      plain video is 1 line — so the price/description starts on the SAME line across cards */
@@ -291,7 +298,7 @@
   .cplay{position:absolute;right:10px;bottom:10px;width:42px;height:42px;border-radius:50%;background:var(--amber);color:#2a1a0c;display:flex;align-items:center;justify-content:center;padding:0;border:0;cursor:pointer;opacity:0;transform:translateY(6px);transition:opacity .12s,transform .12s;}
   .cplay svg{width:18px;height:18px;}
   .cardv:hover .cplay,.cardv:focus-within .cplay{opacity:1;transform:translateY(0);}
-  .cardv:focus-visible{outline:3px solid var(--blue);outline-offset:3px;}
+  .cardv:focus-visible{outline:3px solid var(--focus-ring);outline-offset:3px;}
 
   .rows{background:transparent;border:0;}
   .rw{display:flex;align-items:center;gap:13px;padding:8px 10px;border-radius:10px;}
@@ -457,7 +464,7 @@
   .qbtn2 svg{width:16px;height:16px;display:block;}
   .qbtn2:hover{background:rgba(255,255,255,.10);color:var(--ink);}
   .qbtn2:disabled{opacity:.3;cursor:default;}
-  .qbtn2:focus-visible{outline:none;box-shadow:0 0 0 3px var(--amber);}
+  .qbtn2:focus-visible{outline:none;box-shadow:0 0 0 3px var(--focus-ring);}
   dialog input{width:100%;margin:6px 0 12px;background:var(--card);color:var(--ink);}
   dialog label{display:block;font-size:.82em;font-weight:600;color:var(--mute);margin-bottom:2px;}
   /* Account dialog: grouped credentials + a prominent demo path */
@@ -481,8 +488,8 @@
   a.skip{position:absolute;left:-9999px;top:8px;z-index:60;background:var(--blue);color:#fff;
          padding:10px 16px;border-radius:8px;font-weight:600;}
   a.skip:focus{left:12px;}
-  :focus-visible{outline:3px solid var(--blue);outline-offset:2px;border-radius:4px;}
-  .bar:focus-visible{outline:3px solid var(--blue);outline-offset:4px;}
+  :focus-visible{outline:3px solid var(--focus-ring);outline-offset:2px;border-radius:4px;}
+  .bar:focus-visible{outline:3px solid var(--focus-ring);outline-offset:4px;}
   .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
            clip:rect(0,0,0,0);white-space:nowrap;border:0;}
   @media (prefers-reduced-motion: reduce){
@@ -503,13 +510,13 @@
      until you touch elsewhere (the same trap BASS avoids just below). Focus ring is
      amber (the player's accent), not the global blue. */
   .eqbtn:hover{background:none;border-color:rgba(255,255,255,.4);}
-  .eqbtn:focus-visible{outline:none;box-shadow:0 0 0 3px var(--amber);}
+  .eqbtn:focus-visible{outline:none;box-shadow:0 0 0 3px var(--focus-ring);}
   /* Queue button — an icon peer of EQ/BASS; same transparent hover + amber focus so the
      generic button:hover (blue) and mobile's sticky hover can't leave it shaded. */
   .qbtn{background:none;border:1px solid rgba(255,255,255,.16);border-radius:9px;padding:7px 10px;cursor:pointer;color:#cbbcae;display:flex;align-items:center;flex:0 0 auto;transition:border-color .2s,color .2s;}
   .qbtn svg{width:18px;height:18px;display:block;}
   .qbtn:hover{background:none;border-color:rgba(255,255,255,.4);color:#e9ddd4;}
-  .qbtn:focus-visible{outline:none;box-shadow:0 0 0 3px var(--amber);}
+  .qbtn:focus-visible{outline:none;box-shadow:0 0 0 3px var(--focus-ring);}
   /* one-tap bass boost — a low-shelf, independent of the graphic EQ */
   .bassbtn{background:none;border:1px solid rgba(255,255,255,.16);border-radius:9px;padding:7px 12px;cursor:pointer;
            color:#cbbcae;font:600 11px/1 "Space Grotesk",system-ui,sans-serif;letter-spacing:.09em;flex:0 0 auto;
@@ -522,7 +529,7 @@
   .bassbtn.on:hover{background:var(--amber);}
   /* BASS focus is AMBER (its own accent), not the global blue: an amber ring that
      eases in on focus and eases back out (clears) on blur via the transition above. */
-  .bassbtn:focus-visible{outline:none;box-shadow:0 0 0 3px var(--amber);}
+  .bassbtn:focus-visible{outline:none;box-shadow:0 0 0 3px var(--focus-ring);}
   .eqbars{display:flex;align-items:flex-end;justify-content:space-between;gap:2px;height:18px;width:100%;}
   .eqbars i{display:block;width:3px;border-radius:1px;background:var(--amber);transform-origin:bottom;transform:scaleY(.34);transition:transform .22s;}
   /* the bars rest quiet when idle and only bounce while audio is actually playing */
@@ -580,12 +587,10 @@
     aside{position:static;height:auto;width:100%;min-width:0;flex-direction:row;flex-wrap:wrap;align-items:center;
           gap:8px 10px;padding:10px 14px;overflow:visible;}
     .brand{order:1;margin:0;font-size:1.4em;flex:0 0 auto;}
-    /* row 1: nav pills you swipe/grab through — no visible scrollbar, right-edge fade hint */
-    #nav{order:2;flex:1 1 0;min-width:0;display:flex;flex-direction:row;flex-wrap:nowrap;gap:6px;margin:0;
-         overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-ms-overflow-style:none;
-         -webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;
-         -webkit-mask-image:linear-gradient(to right,#000 90%,transparent);mask-image:linear-gradient(to right,#000 90%,transparent);}
-    #nav::-webkit-scrollbar{display:none;}
+    /* row 1: nav pills that wrap, so every item stays on screen at any width. They used to
+       scroll sideways behind a fade with no scrollbar, which hid six of the nine at 320 px
+       (WCAG 1.4.10, audit 2026-09-11). */
+    #nav{order:2;flex:1 1 100%;min-width:0;display:flex;flex-direction:row;flex-wrap:wrap;gap:6px;margin:0;}
     nav a{margin:0;padding:9px 14px;font-size:1em;white-space:nowrap;flex:0 0 auto;background:rgba(255,255,255,.06);}
     /* row 2: always visible — who/permissions + Account + Tip Jar + theme */
     .acct{order:3;flex:1 1 100%;margin:2px 0 0;padding-top:9px;border-top:1px solid var(--line);
@@ -657,7 +662,7 @@
     .shelf{gap:13px;}
     /* dedicated "See all" pages (playlists, genres, library): a clean TWO-COLUMN grid
        on phones, cards filling each column, tap targets well above the AA minimum. */
-    .shelf.all{display:grid;grid-template-columns:repeat(2,1fr);gap:13px;}
+    .shelf.all{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px;}
     .shelf.all .cardv{width:auto;max-width:none;}
   }
 </style>
@@ -773,7 +778,7 @@
   <div id="view"></div>
 </main>
 
-<footer role="region" aria-label="Player">
+<footer aria-label="Player">
   <div class="np" role="link" tabindex="0" aria-label="Open the artist's page" onclick="npGo()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();npGo();}">
     <div class="cover" aria-hidden="true"></div>
     <div style="min-width:0" role="status" aria-live="polite"><div class="t" id="npT"></div><div class="a" id="npA"></div></div>
@@ -1554,7 +1559,7 @@ const _VIEW_NAMES={home:"Home",search:"Search",foryou:"For You",playlists:"Playl
 // the new one rendered and clobbers it — leaving the wrong page under the right URL. Views
 // capture this at entry and refuse to write once superseded. (Not reachable with the in-page
 // mock, which resolves instantly, but guaranteed against a real API — proven at 320ms latency.)
-let _routeSeq = 0;
+let _routeSeq = 0, _navFocus = false;
 async function route(){
   const h = location.hash || "#/home";
   _routeSeq++;
@@ -1581,6 +1586,10 @@ async function route(){
   const _h1=$("#viewH1"); if(_h1){ _h1.textContent=_vn; _h1.hidden = (_vn==="Home"); }
   document.title = _vn==="Home" ? "SOUND" : _vn+" · SOUND";
   const v=$("#view");
+  // On a navigation the activated link would keep focus and a screen reader would hear
+  // nothing of the new view; move focus to its heading (the view itself on Home, where
+  // the hero carries the h1). Re-renders after an action leave focus where it is.
+  if(_navFocus){ _navFocus=false; const tgt=(_h1 && !_h1.hidden) ? _h1 : v; tgt.tabIndex=-1; try{ tgt.focus({preventScroll:true}); }catch(e){} }
   try{
     let p;
     if(h.startsWith("#/home")) p=viewHome(v);
@@ -2113,10 +2122,10 @@ function videoCard(vd, manage){ const title=esc(vd.title||"Video");
   if(paid && !manage){ const label=`Buy ${vMoney(vd.price)} — yours to keep`;
     media=`<div class="vlock"><div class="vlockinner"><div class="vlockic">🔒</div><button class="ghost mini" onclick='buyVideo(${jarg(vd.video_id)})'>${label}</button></div></div>`; }
   else if(vd.kind==="hosted"){ media=`<video controls playsinline src="${esc(vd.url||"")}" onerror="this.closest('.vcell').classList.add('vdead')"></video>`; }
-  else if(!vd.url){ media=`<div class="vlock"><div class="vlockinner"><div class="vlockic">▶</div><div style="color:var(--mute);font-size:.82em">No preview yet</div></div></div>`; }
+  else if(!vd.url){ media=`<div class="vlock"><div class="vlockinner"><div class="vlockic">▶</div><div class="vlocktext">No preview yet</div></div></div>`; }
   else { const vsrc=videoSrc(vd.url); media = vsrc
     ? `<iframe src="${esc(vsrc)}" title="${title}" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" sandbox="allow-scripts allow-same-origin allow-presentation allow-popups" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`
-    : `<div class="vlock"><div class="vlockinner"><div class="vlockic">▶</div><div style="color:var(--mute);font-size:.82em">Unsupported link</div></div></div>`; }
+    : `<div class="vlock"><div class="vlockinner"><div class="vlockic">▶</div><div class="vlocktext">Unsupported link</div></div></div>`; }
   const feat=vFeatured(vd)?` <span class="chip founding" style="font-size:.7em">$5 Show</span>`:"";
   const hostedTag=vd.kind==="hosted"?` <span class="chip" style="font-size:.7em">hosted · demo</span>`:"";
   const rm=manage?`<div class="vact"><button class="ghost mini danger" onclick='removeVideo(${jarg(vd.video_id)})' aria-label="Remove ${title}">Remove</button></div>`:"";
@@ -2930,7 +2939,7 @@ function eqDrawCurve(){
   pts.forEach((p,i)=>{ g.fillStyle = eqStyle==="spectrum" ? `hsl(${eqSpectrumHue(i)},72%,66%)` : (eqStyle==="blue"?"#a9cdec":"#f2c290"); g.beginPath(); g.arc(p[0],p[1],2.4,0,6.3); g.fill(); });
 }
 
-window.addEventListener("hashchange", route);
+window.addEventListener("hashchange", ()=>{ _navFocus=true; route(); });   // a navigation, not a re-render
 
 // Mouse drag-to-scroll for the horizontal card shelves (touch already swipes natively).
 // Delegated so it covers shelves rendered later; a real drag suppresses the trailing click.
