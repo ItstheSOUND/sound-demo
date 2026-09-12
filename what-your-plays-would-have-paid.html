@@ -220,6 +220,7 @@ footer p{color:var(--pc-mute);}
 <h2 class="pc-h">Before you send this to anyone, the caveats</h2>
 <p>Launch is smaller than the illustrative month. At launch, with a small subscriber base, the per-stream rate will be low, possibly lower than what you earn now. But it's real, it's published every month and it rises with every single subscriber, because there's no management cut taken before it exists and no label position diluting it.</p>
 <p>SOUND does not pay a flat rate per play. There is no global number every stream is worth. A listener's $11.99 goes only to the artists they played, split by how much they played each of them, so the figure above assumes your listeners listen an average amount overall. If your fans play you and not much else, each fan is worth more than this implies; if you're one song in a 400-play month, less. The 2 cents is the thermometer. The user-centric split is the body.</p>
+<p>Every yearly figure here is twelve times the monthly figure shown, rounded to the cent, the way twelve monthly statements add up; enter a year and the year is what you entered, with the monthly figures a twelfth of it.</p>
 <p>SOUND has no free tier, so every play here is a paid one. And all of it is illustrative and pre-launch: the artist agreement is not a signed document, the company is being formed and SOUND has not paid a cent to anyone. This is what the rate does to your plays, not a check anyone is writing.</p>
 </div>
 
@@ -239,11 +240,14 @@ footer p{color:var(--pc-mute);}
 <script>
 window.SoundPlays = (function(){
   "use strict";
-  // Money prints to the cent, rounded once here. A figure under a cent but above
-  // zero prints to four places, so a tiny per-listener amount reads as what it
-  // is rather than as nothing.
+  // Money prints to the cent, rounded here and nowhere else. A figure under a
+  // cent but above zero prints to four places, so a tiny per-listener amount
+  // reads as what it is rather than as nothing.
   var money = function(v, d){ d = (d === undefined) ? ((v > 0 && v < 0.01) ? 4 : 2) : d;
     return "$" + Number(v).toLocaleString("en-US", {minimumFractionDigits: d, maximumFractionDigits: d}); };
+  // The number a money() string shows, read back from the string itself, so a
+  // yearly figure is built from exactly what the reader sees (the rule below).
+  var shown = function(v){ return Number(money(v).replace(/[$,]/g, "")); };
   var int = function(v){ return Number(v).toLocaleString("en-US"); };
   var pct = function(v){ return Number(v).toLocaleString("en-US", {minimumFractionDigits: 1, maximumFractionDigits: 1}) + " percent"; };
   var times = function(v){
@@ -274,19 +278,26 @@ window.SoundPlays = (function(){
     function compute(){
       var S = parseCount($("streams").value, "Streams", $("streams-err"), $("streams"));
       var L = parseCount($("listeners").value, "Listeners", $("listeners-err"), $("listeners"));
-      var win = pc.querySelector('input[name="window"]:checked').value;
-      var months = (win === "year") ? 12 : 1;
+      var byYear = pc.querySelector('input[name="window"]:checked').value === "year";
+      var months = byYear ? 12 : 1;
       if (S === null || isNaN(S) || S === 0) { $("out").hidden = true; $("empty").hidden = false; return; }
       $("empty").hidden = true; $("out").hidden = false;
 
-      // Everything is computed at full precision and rounded once, when printed.
-      var figure = S * M.rate;                                  // the window
-      var yearFigure = (win === "year") ? figure : figure * 12;
-      var windowWord = (win === "year") ? "the 12 months" : "the month";
+      // THE ROUNDING RULE (Mark, 2026-09-11, "fix the math"; spec acceptance item
+      // 3). Every monthly figure is computed exact and rounded to the cent when
+      // printed. Every yearly figure is twelve times the monthly figure AS SHOWN,
+      // never twelve times the exact value, because that is how twelve monthly
+      // statements add up and the engine pays whole cents each month: a reader
+      // who multiplies what the page shows must get what the page shows. A year
+      // entered as a year is shown as entered, and its monthly figures are a
+      // twelfth of what is shown.
+      var figure = S * M.rate;                                  // the window, exact
+      var yearFigure = byYear ? figure : 12 * shown(figure);
+      var windowWord = byYear ? "the 12 months" : "the month";
       $("figure").textContent = money(figure);
       $("figure-note").textContent = "for " + windowWord + ", " + int(S) + " plays at the published rate of " + money(M.rate, 6)
         + " a play. SOUND's illustrative month: " + int(M.subscribers) + " subscribers, " + M.month_label + " in the model. Illustrative, pre-launch.";
-      $("year-line").innerHTML = (win === "year")
+      $("year-line").innerHTML = byYear
         ? "That is the year as you entered it: <span class=\"pc-num\">" + money(yearFigure) + "</span>."
         : "A year of months like this one: <span class=\"pc-num\">" + money(yearFigure) + "</span>.";
 
@@ -297,15 +308,19 @@ window.SoundPlays = (function(){
       if (L !== null && !isNaN(L) && L > 0) {
         var ppl = S / L / months;                               // plays per listener per month
         var share = ppl / M.avg_plays;
-        var perMonth = figure / L / months;
-        var perYear = yearFigure / L;
+        var perMonth, perYear;
+        if (byYear) { perYear = figure / L; perMonth = shown(perYear) / 12; }
+        else { perMonth = figure / L; perYear = 12 * shown(perMonth); }
         $("fans-line").innerHTML = int(L) + (L === 1 ? " listener" : " listeners") + " played you " + times(ppl)
           + (L === 1 ? "" : " each") + " a month, " + pct(share * 100) + " of an average subscriber's month on SOUND. "
-          + (L === 1 ? "That listener" : "Each of them") + " sent you <span class=\"pc-num\">" + money(perMonth)
-          + "</span> for the month, <span class=\"pc-num\">" + money(perYear) + "</span> " + ((win === "year") ? "for the year." : "over a year of months like this one.");
-        var refYear = M.reference_plays * M.rate * 12;
+          + (L === 1 ? "That listener" : "Each of them") + " sent you "
+          + (byYear
+             ? "<span class=\"pc-num\">" + money(perYear) + "</span> for the year, <span class=\"pc-num\">" + money(perMonth) + "</span> a month."
+             : "<span class=\"pc-num\">" + money(perMonth) + "</span> for the month, <span class=\"pc-num\">" + money(perYear) + "</span> over a year of months like this one.");
+        var refMonth = M.reference_plays * M.rate;
+        var refYear = 12 * shown(refMonth);
         $("fans-ref").innerHTML = "For scale: a fan who plays you " + M.reference_plays + " times a month sends you <span class=\"pc-num\">"
-          + money(refYear) + "</span> a year.";
+          + money(refMonth) + "</span> a month, <span class=\"pc-num\">" + money(refYear) + "</span> a year.";
         fans.hidden = false;
       } else {
         fans.hidden = true;
@@ -313,8 +328,9 @@ window.SoundPlays = (function(){
 
       var figure1m = S * M.rate_1m;
       $("scale-line").innerHTML = "If SOUND fills to " + int(M.subscribers_1m) + " subscribers, the same plays come to <span class=\"pc-num\">"
-        + money(figure1m) + "</span> for " + windowWord + ", at " + money(M.rate_1m, 6)
-        + " a play. The rate rises with scale because the bills don't.";
+        + money(figure1m) + "</span> for " + windowWord
+        + (byYear ? "" : ", <span class=\"pc-num\">" + money(12 * shown(figure1m)) + "</span> for a year of months like this one")
+        + ", at " + money(M.rate_1m, 6) + " a play. The rate rises with scale because the bills don't.";
 
       var pooled = S * M.pooled_rate;
       $("pooled-line").innerHTML = "The same " + int(S) + " plays on the pooled model: <span class=\"pc-num\">" + money(pooled)
