@@ -92,6 +92,8 @@ footer p{color:var(--pc-mute);}
 .pc .pc-block{border-left:4px solid var(--pc-amber);padding:.1rem 0 .1rem 1rem;margin:1.4rem 0;}
 .pc .pc-block .pc-h{margin-top:0;}
 .pc .pc-num{font-variant-numeric:tabular-nums;font-weight:600;color:var(--pc-ink);white-space:nowrap;}
+.pc .pc-tag{font-family:'Space Grotesk',system-ui,sans-serif;font-weight:700;font-size:.82rem;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--pc-kick);}
 .pc .pc-compare{display:grid;grid-template-columns:1fr;gap:.5rem;margin:.6rem 0 1rem;max-width:40rem;}
 .pc .pc-bar{display:grid;grid-template-columns:minmax(5.5rem,8rem) 1fr auto;align-items:center;gap:.6rem;font-size:.95rem;color:var(--pc-body);}
 .pc .pc-bar .pc-track{height:1.4rem;background:var(--pc-track);border:1px solid var(--pc-line);border-radius:5px;overflow:hidden;}
@@ -129,7 +131,7 @@ footer p{color:var(--pc-mute);}
 <p>SOUND does the arithmetic the way you'd assume it already worked. A subscription is $11.99. The first 15.35 percent comes off the top and goes to songwriters and their publishing organizations, a legally set pass-through we keep none of. Out of what's left we pay the bills, every one of them itemized in public. Whatever remains is the artist pool, and nobody takes a margin out of it. Divide that pool by all the plays that earned it and what falls out is the per-play rate. It is not a number anyone chooses. It is arithmetic: pool on top, plays on the bottom.</p>
 
 <div class="pc" data-plays-calculator>
-<script class="pc-model" type="application/json">{"model_date":"September 10, 2026","month_label":"January 2027","subscribers":74409,"price":11.99,"revenue":892163.91,"pro_rate":0.1535,"pro_year":2027,"pro_amount":136947.16,"costs":[{"category":"FOUNDER_SALARY","amount":16666.67,"description":"founder / CEO salary ($200k/yr, charter-capped)"},{"category":"SALARIES","amount":58750.0,"description":"team salaries ($705k/yr — eng, product, artist/community, ops)"},{"category":"PAYROLL_TAXES","amount":6133.33,"description":"employer FICA + FUTA/SUTA"},{"category":"HEALTH_INSURANCE","amount":4900.0,"description":"team health benefits"},{"category":"PAYMENT_PROCESSING","amount":48195.45,"description":"Stripe 2.9% + $0.30/transaction (monthly billing)"},{"category":"INFRASTRUCTURE","amount":5500.0,"description":"cloud compute — API, database, workers"},{"category":"CDN_BANDWIDTH","amount":1500.0,"description":"audio storage + delivery — Cloudflare R2 (free egress)"},{"category":"AUDIT_ACCOUNTING","amount":3800.0,"description":"bookkeeping + the monthly CPA review"},{"category":"LEGAL","amount":3500.0,"description":"outside counsel (amortized)"},{"category":"CUSTOMER_SUPPORT","amount":2500.0,"description":"listener + artist support"},{"category":"MARKETING","amount":1500.0,"description":"minimal — organic / word-of-mouth by design"},{"category":"MISC","amount":4500.0,"description":"software/SaaS + insurance (D&O / E&O / cyber)"}],"cost_total":157445.45,"pool":597771.3,"streams":29732067,"rate":0.020105272190292053,"avg_plays":399.5762206184736,"pool_per_sub_year":96.4,"subscribers_1m":1000000,"pool_per_sub_year_1m":98.54,"rate_1m":0.020528204949921785,"reference_plays":20,"pooled_rate":0.003,"pooled_source":"Duetti, 2024 Music Economics Report (report.duetti.co), read Sept. 10, 2026: $3.00 per 1,000 Spotify streams in 2024, global rates, recorded-music income of independent artists, before any label share. Spotify disputes the report.","qualifying_seconds":30}</script>
+<script class="pc-model" type="application/json">{"model_date":"September 10, 2026","month_label":"January 2027","subscribers":74409,"price":11.99,"revenue":892163.91,"pro_rate":0.1535,"pro_year":2027,"pro_amount":136947.16,"costs":[{"category":"FOUNDER_SALARY","amount":16666.67,"description":"founder / CEO salary ($200k/yr, charter-capped)"},{"category":"SALARIES","amount":58750.0,"description":"team salaries ($705k/yr — eng, product, artist/community, ops)"},{"category":"PAYROLL_TAXES","amount":6133.33,"description":"employer FICA + FUTA/SUTA"},{"category":"HEALTH_INSURANCE","amount":4900.0,"description":"team health benefits"},{"category":"PAYMENT_PROCESSING","amount":48195.45,"description":"Stripe 2.9% + $0.30/transaction (monthly billing)"},{"category":"INFRASTRUCTURE","amount":5500.0,"description":"cloud compute — API, database, workers"},{"category":"CDN_BANDWIDTH","amount":1500.0,"description":"audio storage + delivery — Cloudflare R2 (free egress)"},{"category":"AUDIT_ACCOUNTING","amount":3800.0,"description":"bookkeeping + the monthly CPA review"},{"category":"LEGAL","amount":3500.0,"description":"outside counsel (amortized)"},{"category":"CUSTOMER_SUPPORT","amount":2500.0,"description":"listener + artist support"},{"category":"MARKETING","amount":1500.0,"description":"minimal — organic / word-of-mouth by design"},{"category":"MISC","amount":4500.0,"description":"software/SaaS + insurance (D&O / E&O / cyber)"}],"cost_total":157445.45,"pool":597771.3,"streams":29732067,"rate":0.020105272190292053,"avg_plays":399.5762206184736,"pool_per_sub_month":8.033588676302598,"pool_per_sub_year":96.4,"listening":{"mean":400,"median":283,"cap":2500,"interval":null,"sourced":false,"mean_source":"","median_source":"","light":160,"heavy":500,"top_decile":836},"subscribers_1m":1000000,"pool_per_sub_year_1m":98.54,"rate_1m":0.020528204949921785,"reference_plays":20,"pooled_rate":0.003,"pooled_source":"Duetti, 2024 Music Economics Report (report.duetti.co), read Sept. 10, 2026: $3.00 per 1,000 Spotify streams in 2024, global rates, recorded-music income of independent artists, before any label share. Spotify disputes the report.","qualifying_seconds":30}</script>
 <form class="pc-form" novalidate autocomplete="off">
   <div class="pc-field">
     <label for="streams">Streams</label>
@@ -162,6 +164,8 @@ footer p{color:var(--pc-mute);}
     <div class="pc-block" id="fans" hidden>
       <h2 class="pc-h">The right unit is fans</h2>
       <p id="fans-line"></p>
+      <p id="fans-types"></p>
+      <p id="fans-good"><span class="pc-tag">A good case, not the average.</span> <span id="fans-good-text"></span></p>
       <p id="fans-ref"></p>
     </div>
 
@@ -208,6 +212,8 @@ footer p{color:var(--pc-mute);}
       <tr><td>Qualifying plays that month</td><td class="pc-n">29,732,067</td></tr>
       <tr class="pc-total"><td>Per play, pool divided by plays</td><td class="pc-n">$0.020105</td></tr>
       <tr><td>Plays per subscriber that month, on average</td><td class="pc-n">399.5762</td></tr>
+      <tr><td>Plays per subscriber in the listening model, the mean: assumed, unsourced, stated as such until a sourced estimate replaces it</td><td class="pc-n">400</td></tr>
+      <tr class="pc-sub"><td>the typical listener (the median), the heavy listener (the 75th percentile) and the light listener (the 25th), plays a month</td><td class="pc-n">283 · 500 · 160</td></tr>
       <tr><td>Pool per subscriber for a year of months like this one</td><td class="pc-n">$96.40</td></tr>
       <tr><td>At 1,000,000 subscribers, lean scenario: pool per subscriber per year $98.54, over 400-play months</td><td class="pc-n">$0.020528</td></tr>
       <tr><td>The pooled model, for comparison: Spotify, 2024, per stream to an independent artist</td><td class="pc-n">$0.0030</td></tr>
@@ -317,6 +323,23 @@ window.SoundPlays = (function(){
           + (byYear
              ? "<span class=\"pc-num\">" + money(perYear) + "</span> for the year, <span class=\"pc-num\">" + money(perMonth) + "</span> a month."
              : "<span class=\"pc-num\">" + money(perMonth) + "</span> for the month, <span class=\"pc-num\">" + money(perYear) + "</span> over a year of months like this one.");
+        // Money follows the fan: a listener's month is a fee, split by how much of their
+        // own listening was yours, so the same plays are worth more from a light listener
+        // and less from a heavy one. The three listener types come from the listening
+        // block (the median, the quartiles); the share of a month is capped at all of it.
+        var L_ = M.listening;
+        var fromListener = function(total){ return M.pool_per_sub_month * Math.min(1, ppl / total); };
+        var pair = function(v){ return "<span class=\"pc-num\">" + money(v) + "</span> a month, <span class=\"pc-num\">" + money(12 * shown(v)) + "</span> a year"; };
+        var plays = function(v){ return Number(v).toLocaleString("en-US", {maximumFractionDigits: 4}); };
+        var typical = fromListener(L_.median), heavy = fromListener(L_.heavy), light = fromListener(L_.light);
+        var yours = times(ppl) === "1 time" ? "one play" : times(ppl).replace(" times", " plays").replace(" time", " play");
+        $("fans-types").innerHTML = "That is the average subscriber, " + plays(Math.round(M.avg_plays)) + " plays a month, and averages hide the shape of listening. "
+          + "A typical fan plays less, about " + plays(L_.median) + " a month, so " + yours + " are " + pct(Math.min(1, ppl / L_.median) * 100)
+          + " of their month and worth " + pair(typical) + "; a heavy listener, in the top quarter at " + plays(L_.heavy)
+          + " plays or more, sends " + pair(heavy) + " for the same plays.";
+        $("fans-good-text").innerHTML = (ppl >= L_.light
+          ? "A light listener, " + plays(L_.light) + " plays a month or fewer, who plays you and nothing else sends you their whole share of the pool, <span class=\"pc-num\">" + money(M.pool_per_sub_year) + "</span> over a year of months like this one."
+          : "A light listener, about " + plays(L_.light) + " plays a month, the bottom quarter's ceiling, who still gives you " + yours + " sends " + pair(light) + ".");
         var refMonth = M.reference_plays * M.rate;
         var refYear = 12 * shown(refMonth);
         $("fans-ref").innerHTML = "For scale: a fan who plays you " + M.reference_plays + " times a month sends you <span class=\"pc-num\">"
