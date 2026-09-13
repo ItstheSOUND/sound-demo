@@ -1071,13 +1071,16 @@
         return d?resp(d):resp({detail:"not found"},404); }
       if(p.indexOf("/studio/")===0 && p.slice(-4)==="/2fa"){ return resp(GET[p]||{enrolled:false}); }
       if(p.indexOf("/studio/")===0 && p.slice(-9)==="/earnings"){ const id=decodeURIComponent(p.slice(8,-9));
-        // Derived, not stored: the artist's own qualifying streams × the public per-stream rate.
+        // The artist's own payout from the published month: their listeners' fees, split by
+        // each listener's own plays (user-centric). Streams times the public average rate is
+        // shown beside it as the comparison, never as the payout.
         const sd=GET["/studio/"+id], ov=GET["/admin/overview"]||{}, rep=ov.latest_report||{};
         const rate=Number(rep.per_stream_rate||0);
         const row=(ov.top_artists||[]).find(x=>x.name===(sd&&sd.name));
         const streams=row?Number(row.streams):0;
+        const payout=row&&row.earnings!=null?Number(row.earnings):streams*rate;
         return resp({month:rep.month||null, qualifying_streams:streams,
-          per_stream_rate:rep.per_stream_rate||"0", payout:(streams*rate).toFixed(2)}); }
+          per_stream_rate:rep.per_stream_rate||"0", payout:payout.toFixed(2), at_average_rate:(streams*rate).toFixed(2)}); }
       if(p.indexOf("/studio/")===0){ const id=decodeURIComponent(p.slice(8)); const d=studioData(id);
         return d?resp(d):resp({detail:"not found"},404); }
       if(p.indexOf("/artists/")===0 && p.slice(-6)==="/merch"){ return resp(mergedMerch(decodeURIComponent(p.slice(9,-6)))); }
@@ -1883,13 +1886,13 @@ async function viewStudio(v){
       <div class="ledger" style="max-width:520px">
         <div style="font-family:'Space Grotesk';font-weight:700;color:var(--warm-accent);padding:12px 6px">${esc(monthLabel(earn.month))}</div>
         <div class="lrow"><span>Your qualifying streams</span><span>${Number(earn.qualifying_streams).toLocaleString()}</span></div>
-        <div class="lrow"><span>Per-stream rate</span><span>× $${Number(earn.per_stream_rate).toFixed(6)}</span></div>
-        <div class="lrow em"><span>Your payout</span><span>${money(earn.payout)}</span></div>
+        <div class="lrow em"><span>Your payout, your listeners' fees split by their plays</span><span>${money(earn.payout)}</span></div>
+        <div class="lrow"><span>The same streams at the public average rate, $${Number(earn.per_stream_rate).toFixed(6)}</span><span>${money(earn.at_average_rate!=null?earn.at_average_rate:Number(earn.qualifying_streams)*Number(earn.per_stream_rate))}</span></div>
       </div>
-      <div class="note">Your qualifying streams times the public <a href="#/transparency">per-stream rate</a> — the same rate every artist earns, no deals and no tiers. This is your streaming payout from the artist pool. It's private to you; there's no public leaderboard of paychecks. Storefront, fan-club, and show income are separate and go straight to you.</div>
+      <div class="note">Your payout is your listeners' money: each subscriber's fee is split among the artists that subscriber played, in proportion to their plays, and your share of every one of those splits adds up here. The public <a href="#/transparency">per-stream rate</a> is the pool over everyone's plays, an average, so your figure sits above or below your streams times the rate depending on how much else your listeners play; no deals and no tiers move it. It's private to you; there's no public leaderboard of paychecks. Storefront, fan-club, and show income are separate and go straight to you.</div>
     </div>` : `
     <div class="sec"><div class="head"><h3 style="color:var(--warm-accent)">Streaming payout</h3></div>
-      <div class="empty">No streams tallied yet. Once your music is streaming, this shows your payout — your qualifying streams times the public per-stream rate, the same rate every artist earns.</div>
+      <div class="empty">No streams tallied yet. Once your music is streaming, this shows your payout: your listeners' fees, split by how much of each listener's month was you, with the same streams at the public average rate beside it for comparison.</div>
     </div>`;
   const IST="width:100%;padding:11px 14px;border:1px solid var(--field);border-radius:10px;background:var(--card);color:var(--ink);font:inherit;max-width:440px;box-sizing:border-box";
   const verified=d.verified?'<span class="chip">✓ Verified</span>':'', founding=d.is_founding_artist?'<span class="chip founding">Founding</span>':'';
@@ -2037,7 +2040,7 @@ function renderPublishing(d){
       <span style="flex:1 1 auto;min-width:0">${esc(t.title)}</span>
       <span style="color:var(--mute);font-size:.82em">${w.length?esc(w.map(x=>x.name+" "+x.share+"%").join(", ")):"nobody is registered to collect on this"}</span>
     </div>`;}).join("") : `<div class="empty">No tracks yet.</div>`;
-  const ratioLine = r ? `<div class="note">On this month's published accounting, ${r.poolPct.toFixed(1)}% of a subscription reaches the artist pool and a further ${r.proPct.toFixed(1)}% is songwriter money paid out to the PROs and the MLC. That works out to roughly <b>$${r.ratio.toFixed(2)} of songwriting royalties for every $1.00</b> you earn from streaming here, generated by the very same plays. It goes to whoever is registered to collect it. If that is not you, it is not being held for you.</div>` : "";
+  const ratioLine = r ? `<div class="note">On this month's published accounting, ${r.poolPct.toFixed(1)}% of a subscription reaches the artist pool and a further ${r.proPct.toFixed(2)}% is songwriter money paid out to the PROs and the MLC. That works out to roughly <b>$${r.ratio.toFixed(2)} of songwriting royalties for every $1.00</b> you earn from streaming here, generated by the very same plays. It goes to whoever is registered to collect it. If that is not you, it is not being held for you.</div>` : "";
   host.innerHTML = `
     <div class="head"><h3 style="color:var(--warm-accent)">Songwriting royalties</h3></div>
     <div class="ledger" style="max-width:640px">${rows}</div>
