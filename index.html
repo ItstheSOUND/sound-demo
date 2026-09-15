@@ -2529,12 +2529,18 @@ async function viewTransparency(v){
     const passKeys=rev.cap_pass_through_categories||["payment_processing","cdn_bandwidth"];
     const passThrough=(r.operating_costs||[]).filter(c=>passKeys.includes(c.category)).reduce((a,c)=>a+Number(c.amount||0),0);
     const passPhrase=esc(rev.cap_pass_through||"the pass-through lines");
-    const otherShare=Number(rev.gross_subscription_revenue)>0?(Number(rev.total_operating_costs||0)-passThrough)/Number(rev.gross_subscription_revenue)*100:0;
+    // the songwriters' share and the cap read the revenue after reversals (a payload saved before
+    // the reversal line carries none, so the net is the gross)
+    const net=rev.net_subscription_revenue!=null?Number(rev.net_subscription_revenue):Number(rev.gross_subscription_revenue);
+    const otherShare=net>0?(Number(rev.total_operating_costs||0)-passThrough)/net*100:0;
     const capPct=(Number(rev.launch_cost_cap||0)*100).toFixed(0);
-    const chargedPct=Number(rev.gross_subscription_revenue)>0?(Number(rev.operating_costs_charged!=null?rev.operating_costs_charged:rev.total_operating_costs)/Number(rev.gross_subscription_revenue)*100).toFixed(1):"0";
+    const chargedPct=net>0?(Number(rev.operating_costs_charged!=null?rev.operating_costs_charged:rev.total_operating_costs)/net*100).toFixed(1):"0";
+    const reversed=Number(rev.revenue_reversals||0);
     const rows=[
       ["Subscription revenue", money(rev.gross_subscription_revenue)],
-      ["PRO / publishing ("+(Number(rev.gross_subscription_revenue)>0?(Number(rev.pro_royalty_deduction)/Number(rev.gross_subscription_revenue)*100).toFixed(2).replace(/\.?0+$/,""):"")+"%)", "− "+money(rev.pro_royalty_deduction)],
+      ["Refunds and lost disputes, returned to subscribers ("+Number(rev.reversals_refunds||0).toLocaleString()+" refunds, "+Number(rev.reversals_disputes||0).toLocaleString()+" disputes; off revenue before anything is shared)", "− "+money(reversed)],
+      ["Revenue after reversals", money(net)],
+      ["PRO / publishing ("+(net>0?(Number(rev.pro_royalty_deduction)/net*100).toFixed(2).replace(/\.?0+$/,""):"")+"% of it)", "− "+money(rev.pro_royalty_deduction)],
       ["Operating costs this month (itemized below)", money(rev.total_operating_costs)],
       ["Paid by the launch fund (a memo line, never in the pool)", money(rev.launch_fund_payment||0)],
       ["Charged to subscribers ("+chargedPct+"% of revenue in all; the costs under the cap's "+capPct+"% line were "+otherShare.toFixed(1)+"%, so the cap "+(Number(rev.launch_fund_payment||0)>0?"bound and the launch fund paid the rest":"did not bind")+" this month)", "− "+money(rev.operating_costs_charged!=null?rev.operating_costs_charged:rev.total_operating_costs)],
@@ -2542,6 +2548,7 @@ async function viewTransparency(v){
       ["Artist Pool", money(rev.artist_pool), true],
       ["Per-stream rate", "$"+Number((r.rates||{}).base_per_stream_rate||0).toFixed(6), true],
       ["Qualifying streams", Number((r.streams||{}).qualifying||0).toLocaleString()],
+      ["Trials (Article V): "+Number((r.streams||{}).trials_started||0).toLocaleString()+" started, "+Number((r.streams||{}).trials_converted||0).toLocaleString()+" converted, "+Number((r.streams||{}).trials_ended_unpaid||0).toLocaleString()+" ended without converting, "+Number((r.streams||{}).trials_open||0).toLocaleString()+" still open at month's end; trial plays "+Number((r.streams||{}).trial_paid||0).toLocaleString()+" paid in a first paid month, "+Number((r.streams||{}).trial_unpaid||0).toLocaleString()+" unpaid, "+Number((r.streams||{}).trial_open||0).toLocaleString()+" so far by the open trials", ""],
       ["Artists paid", Number(r.artists_paid||0).toLocaleString()],
     ];
     // Why revenue is not the count times the price: the basis, from the payload, under the revenue line.
