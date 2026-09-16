@@ -2,8 +2,8 @@
   publish = "."
   command = ""
 
-# A static site: the player is index.html (no email gate) with its clips in
-# clips/ and the hero in img/, both written by Scripts/tools/demo_assets.py.
+# A static site: the player is index.html (no email gate; it computes its own
+# tone-bed clips) with the hero in img/, written by Scripts/tools/demo_assets.py.
 # Keep old /prototype.html links working:
 [[redirects]]
   from = "/prototype.html"
@@ -26,14 +26,9 @@
 # docs.netlify.com/build/caching/caching-overview/ ("Cache-Control: public,
 # max-age=0, must-revalidate"): a normal refresh revalidates, the ETag makes
 # that a cheap 304 when nothing changed, and a new deploy shows up at once.
-# The clips and the hero are named by their content hash, so a changed file is
-# a new name and the old name never has to be refetched: a year in the browser
-# cache, no revalidation.
-[[headers]]
-  for = "/clips/*"
-  [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
-
+# The hero's files are named by their content hash, so a changed file is a new
+# name and the old name never has to be refetched: a year in the browser cache,
+# no revalidation.
 [[headers]]
   for = "/img/*"
   [headers.values]
