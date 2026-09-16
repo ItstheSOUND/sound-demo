@@ -564,7 +564,7 @@
   .eqband{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;}
   .eqdb{font-size:.68em;color:var(--mute);font-variant-numeric:tabular-nums;min-height:1em;}
   .eqhz{font-size:.68em;color:var(--mute);}
-  .eqslider{writing-mode:vertical-lr;direction:rtl;-webkit-appearance:slider-vertical;width:20px;height:100px;accent-color:var(--amber);cursor:pointer;}
+  .eqslider{writing-mode:vertical-lr;direction:rtl;width:20px;height:100px;accent-color:var(--amber);cursor:pointer;}   /* vertical by writing-mode alone (Chrome 124, Firefox 120, Safari 16.5 per MDN's compat data, read 2026-09-16); the non-standard slider-vertical appearance is gone with its Chromium deprecation notice */
   .eqfoot{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:16px;}
   .eqfoot select{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;}
   .eqtoggle{font-size:.82em;color:var(--mute);display:flex;align-items:center;gap:6px;cursor:pointer;}
