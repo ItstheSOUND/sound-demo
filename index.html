@@ -2584,6 +2584,7 @@ async function viewTransparency(v){
       ["Charged to subscribers ("+chargedPct+"% of revenue in all; the costs under the cap's "+capPct+"% line were "+otherShare.toFixed(1)+"%, so the cap "+(Number(rev.launch_fund_payment||0)>0?"bound and the launch fund paid the rest":"did not bind")+" this month)", "− "+money(rev.operating_costs_charged!=null?rev.operating_costs_charged:rev.total_operating_costs)],
       ["Reserve (one-time buffer)", "− "+money(rev.operating_cost_reserve)],
       ["Artist Pool", money(rev.artist_pool), true],
+      ["Unattributed revenue redistributed (fees of subscribers who streamed nothing, shared across the artists others played, by the earnings listeners directed)", money(rev.unattributed_revenue_distributed)],
       ["Per-stream rate", "$"+Number((r.rates||{}).base_per_stream_rate||0).toFixed(6), true],
       ["Qualifying streams", Number((r.streams||{}).qualifying||0).toLocaleString()],
       ["Trials (Article V): "+Number((r.streams||{}).trials_started||0).toLocaleString()+" started, "+Number((r.streams||{}).trials_converted||0).toLocaleString()+" converted, "+Number((r.streams||{}).trials_ended_unpaid||0).toLocaleString()+" ended without converting, "+Number((r.streams||{}).trials_open||0).toLocaleString()+" still open at month's end; trial plays "+Number((r.streams||{}).trial_paid||0).toLocaleString()+" paid in a first paid month, "+Number((r.streams||{}).trial_unpaid||0).toLocaleString()+" unpaid, "+Number((r.streams||{}).trial_open||0).toLocaleString()+" so far by the open trials", ""],
