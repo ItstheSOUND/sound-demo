@@ -48,6 +48,15 @@ a:hover{color:var(--pc-ink);}
 .doors{list-style:none;padding:0;margin:.5rem 0 0;}
 .doors li{margin:0 0 .6rem;}
 footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--pc-line);font-size:.92rem;color:var(--pc-mute);}
+.pc-capture{margin:2.5rem 0 0;padding:1.25rem 1.25rem 1rem;background:var(--pc-card);border:1px solid var(--pc-line);border-radius:14px;}
+.pc-capture h2{margin-top:0;}
+.pc-capture form{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;margin:1rem 0 .6rem;}
+.pc-cap-label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;}
+.pc-capture input[type=email]{flex:1 1 16rem;min-width:0;padding:.6rem .7rem;font:inherit;border:1px solid var(--pc-line);border-radius:10px;background:var(--pc-bg);color:inherit;}
+.pc-capture button{padding:.6rem 1rem;font:inherit;font-weight:600;border:1px solid var(--pc-line);border-radius:10px;background:var(--pc-kick);color:var(--pc-bg);cursor:pointer;}
+.pc-capture button:hover{filter:brightness(1.1);}
+.pc-hp{position:absolute;left:-9999px;}
+@media (max-width:30rem){.pc-capture form{flex-direction:column;align-items:stretch;}}
 footer p{color:var(--pc-mute);}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto!important;}}
 @media (max-width:22rem){main{padding:1rem .75rem 2.5rem;} .pc form{padding:1rem .9rem .8rem;}}
@@ -244,6 +253,26 @@ footer p{color:var(--pc-mute);}
 <p>SOUND has no free tier, so every play here is a paid one. And all of it is illustrative and pre-launch: the artist agreement is not a signed document, the company is being formed and SOUND has not paid a cent to anyone. This is what the rate does to your plays, not a check anyone is writing.</p>
 </div>
 
+<section class="pc-capture" id="capture">
+  <h2>Want the first real month when it lands?</h2>
+  <p>Every figure above is illustrative. SOUND has not opened, so no month has been published
+  and no rate has been measured. When the first one is, it goes up in full, with the costs
+  itemized and the arithmetic you just watched. Leave an address and I will send it.</p>
+  <form name="plays-calculator" method="POST" action="/what-your-plays-would-have-paid.html?thanks=1" data-netlify="true" netlify-honeypot="website">
+    <input type="hidden" name="form-name" value="plays-calculator">
+    <p class="pc-hp"><label>Leave this empty <input name="website" tabindex="-1" autocomplete="off"></label></p>
+    <label class="pc-cap-label" for="cap-email">Email</label>
+    <input id="cap-email" name="email" type="email" required autocomplete="email" placeholder="you@example.com">
+    <button type="submit">Send me the first month</button>
+  </form>
+  <p class="pc-hint">One email, when there is something real to show. No list, no drip, no sharing
+  it with anyone. Nothing else on this page is sent anywhere.</p>
+</section>
+<section class="pc-capture" id="thanks" hidden>
+  <h2>Got it.</h2>
+  <p>You will hear from me when the first real month is published, and not before.</p>
+</section>
+
 <h2>Where to go from here</h2>
 <ul class="doors">
   <li><a href="https://www.itsthesound.com/how-the-money-works">How the money works</a></li>
@@ -253,7 +282,10 @@ footer p{color:var(--pc-mute);}
 
 <footer>
   <p>— Mark Esser, Founder, SOUND · <a href="https://www.itsthesound.com">itsthesound.com</a> · figures illustrative and pre-launch, from the published model, September 15, 2026.</p>
-  <p>This page asks nothing of any server. No analytics, no cookies, nothing loaded from anywhere else.</p>
+  <p>The calculator runs entirely in your browser: what you type is never sent anywhere, and
+  nothing on this page is loaded from any other site. No analytics, no cookies, no trackers.
+  The one exception is the form above, and only if you use it: that address goes to SOUND and
+  nowhere else.</p>
 </footer>
 </main>
 
@@ -405,6 +437,12 @@ window.SoundPlays = (function(){
   return {init: init};
 })();
 SoundPlays.init(document);
+// The form posts to Netlify and comes back with ?thanks=1. No cookie, no storage, no
+// request: the only state is the query string the round trip already carried.
+if (/[?&]thanks=1/.test(location.search)) {
+  var c = document.getElementById('capture'), t = document.getElementById('thanks');
+  if (c && t) { c.hidden = true; t.hidden = false; t.scrollIntoView(); }
+}
 </script>
 </body>
 </html>
