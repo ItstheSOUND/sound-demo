@@ -2408,7 +2408,7 @@ async function fillCommerce(id){
 }
 function joinTier(){ toast("Fan club opens after the security & legal review."); }
 function buyMerch(){ toast("Merch checkout opens after review — at cost, 0% SOUND margin."); }
-function soundShop(){ toast("SOUND's own shop opens after launch. Its margin goes to SOUND's reserve, never to the artist pool, and it's itemized in the monthly accounting. Your favorite artists' own merch always stays theirs, at 0% cut."); }
+function soundShop(){ toast("SOUND's own shop opens after launch. Its margin will go to SOUND's reserve, never to the artist pool, and will be itemized in the monthly accounting. Your favorite artists' own merch always stays theirs, at 0% cut."); }
 async function viewAlbum(v, id){
   const seq=_routeSeq;
   try{
@@ -2557,7 +2557,7 @@ async function viewPlays(v){
 }
 
 async function viewTransparency(v){
-  v.innerHTML=`<h2 class="section">Transparency</h2><p class="sub">The whole accounting, in public. To be CPA-reviewed, no login, and the engine that computes it will be open-source.</p>
+  v.innerHTML=`<h2 class="section">Transparency</h2><p class="sub">The whole accounting, in public from launch. To be CPA-reviewed, no login, and the engine that computes it will be open-source.</p>
     <div class="note" style="margin:0 0 18px"><b>Make music?</b> Type the streams and listeners your dashboard shows for a month and watch the same plays computed at this rate, with the arithmetic printed underneath: <a href="#/plays" style="color:var(--warm-accent)">Your plays →</a></div><div id="tr"></div>`;
   try{
     const r=await jget("/transparency/latest"); const rev=r.revenue||{};
