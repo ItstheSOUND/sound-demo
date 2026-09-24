@@ -1313,7 +1313,7 @@
       $("scale-line").innerHTML = "If SOUND fills to " + int(M.subscribers_1m) + " subscribers, the same plays come to <span class=\"pc-num\">"
         + money(figure1m) + "</span> for " + windowWord
         + (byYear ? "" : ", <span class=\"pc-num\">" + money(12 * shown(figure1m)) + "</span> for a year of months like this one")
-        + ", at an assumed " + money(M.rate_1m, 6) + " a play. The rate rises with scale because the bills don't.";
+        + ", at an assumed " + money(M.rate_1m, 6) + " a play.";
 
       var pooled = S * M.pooled_rate;
       $("pooled-line").innerHTML = "The same " + int(S) + " plays on the pooled model: <span class=\"pc-num\">" + money(pooled)
