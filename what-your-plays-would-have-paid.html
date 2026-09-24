@@ -247,7 +247,7 @@ footer p{color:var(--pc-mute);}
 </details>
 
 <h2 class="pc-h">Before you send this to anyone, the caveats</h2>
-<p>Launch is smaller than the illustrative month. At launch the launch fund pays the bills above the 20 percent line, so on the lean plan the assumed rate runs from about 0.6 cents a play at the start to about 0.9 cents by 50,750 subscribers, where the fund's part ends and the rate keeps rising with every subscriber through the launch period. Those are modeled on an assumed listening average until the first real month. It's real, it's published every month and it rises with every single subscriber through the launch period, because there's no management cut taken before it exists and no label position diluting it.</p>
+<p>Launch is smaller than the illustrative month. At launch the launch fund pays the bills above the 20 percent line, so on the lean plan the assumed rate runs from about 0.6 cents a play at the start to about 0.9 cents by 50,750 subscribers, where the fund's part ends. Those are modeled on an assumed listening average until the first real month. It will be real and it will be published every month. Nothing comes out for a manager or a label before it exists.</p>
 <p>SOUND does not pay a flat rate per play. There is no global number every stream is worth. A listener's $11.99 goes only to the artists they played, split by how much they played each of them, so the figure above assumes your listeners listen an average amount overall. If your fans play you and not much else, each fan is worth more than this implies; if you're one song in an assumed 694-play month, less. That assumed 1 cent is the thermometer. The user-centric split is the body.</p>
 <p>Every yearly figure here is twelve times the monthly figure shown, rounded to the cent, the way twelve monthly statements add up; enter a year and the year is what you entered, with the monthly figures a twelfth of it.</p>
 <p>SOUND has no free tier, so every play here is a paid one. And all of it is illustrative and pre-launch: the artist agreement is not a signed document, the company is being formed and SOUND has not paid a cent to anyone. This is what the rate does to your plays, not a check anyone is writing.</p>
@@ -399,7 +399,7 @@ window.SoundPlays = (function(){
       $("scale-line").innerHTML = "If SOUND fills to " + int(M.subscribers_1m) + " subscribers, the same plays come to <span class=\"pc-num\">"
         + money(figure1m) + "</span> for " + windowWord
         + (byYear ? "" : ", <span class=\"pc-num\">" + money(12 * shown(figure1m)) + "</span> for a year of months like this one")
-        + ", at an assumed " + money(M.rate_1m, 6) + " a play. The rate rises with scale because the bills don't.";
+        + ", at an assumed " + money(M.rate_1m, 6) + " a play.";
 
       var pooled = S * M.pooled_rate;
       $("pooled-line").innerHTML = "The same " + int(S) + " plays on the pooled model: <span class=\"pc-num\">" + money(pooled)
