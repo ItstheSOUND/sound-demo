@@ -2577,14 +2577,17 @@ async function viewTransparency(v){
     const r=await jget("/transparency/latest"); const rev=r.revenue||{};
     // A MISSING MONEY FIGURE REFUSES THE LEDGER, NAMING IT (the Chief Accountant, 2026-09-24). Zero is a
     // plausible accounting value, so a default claims a figure we don't have, and the lines around a
-    // blank would still add up to a different pool. Every figure the ledger names is required.
+    // blank would still add up to a different pool. Every figure the ledger names is required, and
+    // required means a decimal string, the only shape the report sends one in: an empty string, a
+    // bare number or an exponent is not a figure the report sent, and would print as one.
+    const figure=v=>typeof v==="string"&&DECIMAL.test(v);
     const required=["gross_subscription_revenue","revenue_reversals","net_subscription_revenue","pro_royalty_deduction",
       "total_operating_costs","launch_fund_payment","operating_costs_charged","operating_cost_reserve","artist_pool",
-      "unattributed_revenue_distributed"].filter(k=>rev[k]==null)
-      .concat((r.rates||{}).base_per_stream_rate==null?["base_per_stream_rate"]:[]);
+      "unattributed_revenue_distributed"].filter(k=>!figure(rev[k]))
+      .concat(figure((r.rates||{}).base_per_stream_rate)?[]:["base_per_stream_rate"]);
     if(required.length){
       console.error("transparency: the report is missing "+required.join(", ")+"; the ledger is not shown");
-      $("#tr").innerHTML=`<div class="note">This report is missing ${required.map(esc).join(", ")}, so its ledger isn't shown. Its lines have to add up to the Artist Pool, and a missing figure isn't filled in.</div>`;
+      $("#tr").innerHTML=`<div class="note">This report is missing ${required.map(esc).join(", ")}, or doesn't give it as a figure, so its ledger isn't shown. Its lines have to add up to the Artist Pool, and a missing figure isn't filled in.</div>`;
       return;
     }
     // the shares the charged line prints: the whole against revenue, and the costs under the cap
