@@ -1421,15 +1421,28 @@ async function demoLogin(){
 // decimal string prints from that string, never re-read as a float.
 const FMT = "en-US", DECIMAL = /^(-?)(\d+)(?:\.(\d+))?$/;
 const grouped = d => d.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+// A figure that is absent, or that the page computed and did not come out a number, is not zero:
+// zero is a figure we have. The formatters refuse both, with different reasons, and the view that
+// asked refuses its block with that reason (the Chief Accountant, 2026-09-24).
+class FigureError extends Error {}
+// Only a number the page computed reaches here (a report string that is a figure has already
+// printed from its own digits), so nothing is coerced: Number(""), Number(false) and Number([])
+// are all 0, which is the default this refuses.
+function computed(v){
+  if (v == null || (typeof v === "string" && v.trim() === "")) throw new FigureError("a figure it needs is missing");
+  if (typeof v !== "number") throw new FigureError("a figure isn't in a form it can read");
+  if (!Number.isFinite(v)) throw new FigureError("a figure did not compute");
+  return v;
+}
 // Money: the report's own digits, padded to cents and never rounded. A sub-cent money figure prints
 // as it came, because it is a defect to see, not one to hide. A figure the page computed is a number.
 function money(v){
   const m = typeof v === "string" && DECIMAL.exec(v);
   if (m) return "$" + m[1] + grouped(m[2]) + "." + (m[3] || "").padEnd(2, "0");
-  return "$" + Number(v || 0).toLocaleString(FMT, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  return "$" + computed(v).toLocaleString(FMT, {minimumFractionDigits: 2, maximumFractionDigits: 2});
 }
 // A rate prints exactly as the report sends it; only a computed one is fixed at six places.
-function perStream(v){ return "$" + (typeof v === "string" && DECIMAL.test(v) ? v : Number(v || 0).toFixed(6)); }
+function perStream(v){ return "$" + (typeof v === "string" && DECIMAL.test(v) ? v : computed(v).toFixed(6)); }
 function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 // A JS value going into an HTML attribute (e.g. onclick='fn(${jarg(id)})'). JSON.stringify
 // alone does NOT escape ' or the HTML metacharacters, so a hostile id could break out of the
@@ -1947,7 +1960,7 @@ async function viewStudio(v){
   catch(e){ v.innerHTML=`<div class="empty">Couldn't reach the Studio.</div>`; return; }
   let earn=null;
   try{ earn=await (await fetch("/studio/"+encodeURIComponent(a.id)+"/earnings",{headers:artistHeaders()})).json(); }catch(e){}
-  const earnHtml = (earn && Number(earn.qualifying_streams)>0) ? `
+  let earnHtml; try{ earnHtml = (earn && Number(earn.qualifying_streams)>0) ? `
     <div class="sec"><div class="head"><h3 style="color:var(--warm-accent)">Streaming payout</h3></div>
       <div class="ledger" style="max-width:520px">
         <div style="font-family:'Space Grotesk';font-weight:700;color:var(--warm-accent);padding:12px 6px">${esc(monthLabel(earn.month))}</div>
@@ -1959,7 +1972,8 @@ async function viewStudio(v){
     </div>` : `
     <div class="sec"><div class="head"><h3 style="color:var(--warm-accent)">Streaming payout</h3></div>
       <div class="empty">No streams tallied yet. Once your music is streaming, this shows your payout: your listeners' fees, split by how much of each listener's month was you, with the same streams at the public average rate beside it for comparison.</div>
-    </div>`;
+    </div>`; }catch(e){ if(!(e instanceof FigureError)) throw e;
+    earnHtml=`<div class="sec"><div class="empty">Your streaming payout isn't shown: ${esc(e.message)}.</div></div>`; }
   const IST="width:100%;padding:11px 14px;border:1px solid var(--field);border-radius:10px;background:var(--card);color:var(--ink);font:inherit;max-width:440px;box-sizing:border-box";
   const verified=d.verified?'<span class="chip">✓ Verified</span>':'', founding=d.is_founding_artist?'<span class="chip founding">Founding</span>':'';
   const links=d.links||{};
@@ -2580,14 +2594,25 @@ async function viewTransparency(v){
     // blank would still add up to a different pool. Every figure the ledger names is required, and
     // required means a decimal string, the only shape the report sends one in: an empty string, a
     // bare number or an exponent is not a figure the report sent, and would print as one.
-    const figure=v=>typeof v==="string"&&DECIMAL.test(v);
-    const required=["gross_subscription_revenue","revenue_reversals","net_subscription_revenue","pro_royalty_deduction",
+    const figure=v=>typeof v==="string"&&DECIMAL.test(v), whole=v=>Number.isInteger(v)&&v>=0;
+    const money_=k=>[k,rev[k],figure], count_=(k,v)=>[k,v,whole];
+    const named=["gross_subscription_revenue","revenue_reversals","net_subscription_revenue","pro_royalty_deduction",
       "total_operating_costs","launch_fund_payment","operating_costs_charged","operating_cost_reserve","artist_pool",
-      "unattributed_revenue_distributed"].filter(k=>!figure(rev[k]))
-      .concat(figure((r.rates||{}).base_per_stream_rate)?[]:["base_per_stream_rate"]);
-    if(required.length){
-      console.error("transparency: the report is missing "+required.join(", ")+"; the ledger is not shown");
-      $("#tr").innerHTML=`<div class="note">This report is missing ${required.map(esc).join(", ")}, or doesn't give it as a figure, so its ledger isn't shown. Its lines have to add up to the Artist Pool, and a missing figure isn't filled in.</div>`;
+      "unattributed_revenue_distributed"].map(money_)
+      .concat([["base_per_stream_rate",(r.rates||{}).base_per_stream_rate,figure]])
+      // counts follow the same rule: an absent count and a zero count are different statements
+      .concat(["reversals_refunds","reversals_disputes"].map(k=>count_(k,rev[k])))
+      .concat(["qualifying","trials_started","trials_converted","trials_ended_unpaid","trials_open","trial_paid",
+               "trial_unpaid","trial_open"].map(k=>count_("streams."+k,(r.streams||{})[k])))
+      .concat([count_("artists_paid",r.artists_paid)]);
+    // Absent and malformed are different faults, so the refusal says which (QA, 2026-09-24).
+    const missing=named.filter(([k,v])=>v==null).map(([k])=>k);
+    const malformed=named.filter(([k,v,ok])=>v!=null&&!ok(v)).map(([k])=>k);
+    if(missing.length||malformed.length){
+      const said=[missing.length?"is missing "+missing.map(esc).join(", "):"",
+                  malformed.length?"gives "+malformed.map(esc).join(", ")+" in a form that isn't a figure":""].filter(Boolean).join(", and ");
+      console.error("transparency: the report "+said+"; the ledger is not shown");
+      $("#tr").innerHTML=`<div class="note">This report ${said}, so its ledger isn't shown. Its lines have to add up to the Artist Pool, and a missing figure isn't filled in.</div>`;
       return;
     }
     // the shares the charged line prints: the whole against revenue, and the costs under the cap
@@ -2606,7 +2631,7 @@ async function viewTransparency(v){
     const chargedPct=net>0?(Number(rev.operating_costs_charged)/net*100).toFixed(1):"0";
     const rows=[
       ["Subscription revenue", money(rev.gross_subscription_revenue)],
-      ["Refunds and lost disputes, returned to subscribers ("+Number(rev.reversals_refunds||0).toLocaleString(FMT)+" refunds, "+Number(rev.reversals_disputes||0).toLocaleString(FMT)+" disputes; off revenue before anything is shared)", "− "+money(rev.revenue_reversals)],
+      ["Refunds and lost disputes, returned to subscribers ("+rev.reversals_refunds.toLocaleString(FMT)+" refunds, "+rev.reversals_disputes.toLocaleString(FMT)+" disputes; off revenue before anything is shared)", "− "+money(rev.revenue_reversals)],
       ["Revenue after reversals", money(rev.net_subscription_revenue)],
       ["PRO / publishing ("+(net>0?(Number(rev.pro_royalty_deduction)/net*100).toFixed(2).replace(/\.?0+$/,""):"")+"% of it)", "− "+money(rev.pro_royalty_deduction)],
       ["Operating costs this month (itemized below)", money(rev.total_operating_costs)],
@@ -2616,9 +2641,9 @@ async function viewTransparency(v){
       ["Artist Pool", money(rev.artist_pool), true],
       ["Unattributed revenue redistributed (fees of subscribers who streamed nothing, split in equal shares among the artists others played, each capped at its own listeners’ fees, the rest carried)", money(rev.unattributed_revenue_distributed)],
       ["Per-stream rate", perStream((r.rates||{}).base_per_stream_rate), true],
-      ["Qualifying streams", Number((r.streams||{}).qualifying||0).toLocaleString(FMT)],
-      ["Trials (Article V): "+Number((r.streams||{}).trials_started||0).toLocaleString(FMT)+" started, "+Number((r.streams||{}).trials_converted||0).toLocaleString(FMT)+" converted, "+Number((r.streams||{}).trials_ended_unpaid||0).toLocaleString(FMT)+" ended without converting, "+Number((r.streams||{}).trials_open||0).toLocaleString(FMT)+" still open at month's end; trial plays "+Number((r.streams||{}).trial_paid||0).toLocaleString(FMT)+" paid in a first paid month, "+Number((r.streams||{}).trial_unpaid||0).toLocaleString(FMT)+" unpaid, "+Number((r.streams||{}).trial_open||0).toLocaleString(FMT)+" so far by the open trials", ""],
-      ["Artists paid", Number(r.artists_paid||0).toLocaleString(FMT)],
+      ["Qualifying streams", r.streams.qualifying.toLocaleString(FMT)],
+      ["Trials (Article V): "+r.streams.trials_started.toLocaleString(FMT)+" started, "+r.streams.trials_converted.toLocaleString(FMT)+" converted, "+r.streams.trials_ended_unpaid.toLocaleString(FMT)+" ended without converting, "+r.streams.trials_open.toLocaleString(FMT)+" still open at month's end; trial plays "+r.streams.trial_paid.toLocaleString(FMT)+" paid in a first paid month, "+r.streams.trial_unpaid.toLocaleString(FMT)+" unpaid, "+r.streams.trial_open.toLocaleString(FMT)+" so far by the open trials", ""],
+      ["Artists paid", r.artists_paid.toLocaleString(FMT)],
     ];
     // Why revenue is not the count times the price: the basis, from the payload, under the revenue line.
     const pr=r.pricing||null;
@@ -2633,6 +2658,8 @@ async function viewTransparency(v){
       + (costs?`<div style="color:var(--mute);font-size:.85em;padding:12px 6px 2px">Operating costs, itemized</div>`+costs:"")
       + `</div>`+assumed+`<div class="note"><b>Public vs. private.</b> The accounting, the per-stream rate, the formula and the engine will be public, so anyone will be able to check the math. Each artist's own earnings stay private to their dashboard — no leaderboard of paychecks.</div>`;
   }catch(e){
+    if(e instanceof FigureError){ console.error("transparency: "+e.message+"; the ledger is not shown");
+      $("#tr").innerHTML=`<div class="note">In this report, ${esc(e.message)}, so its ledger isn't shown. Its lines have to add up to the Artist Pool, and a missing figure isn't filled in.</div>`; return; }
     $("#tr").innerHTML=`<div class="note">No monthly report published yet. Once SOUND is operating, every month this page will show gross revenue, itemized costs, the artist pool, the per-stream rate, and total streams — reviewed by an independent CPA, at a no-login URL, permanently archived.</div>`;
   }
 }
@@ -2643,8 +2670,9 @@ async function viewOperator(v){
   let d;
   try{ const r=await fetch("/admin/overview",{headers:adminHeaders()}); if(!r.ok){ $("#op").innerHTML=`<div class="empty">Operator access denied — check your key in Account.</div>`; return; } d=await r.json(); }
   catch(e){ $("#op").innerHTML=`<div class="empty">Couldn't load the dashboard.</div>`; return; }
+  try{
   const t=d.totals;
-  const psrRaw=(d.latest_report||{}).per_stream_rate, psr=Number(psrRaw||0);   // public per-stream rate; payouts derive from it
+  const psrRaw=(d.latest_report||{}).per_stream_rate, psr=(typeof psrRaw==="string"&&DECIMAL.test(psrRaw))?Number(psrRaw):NaN;   // public per-stream rate; payouts derive from it
   const kpi=(big,small)=>`<div class="card" style="cursor:default"><div style="font-family:'Space Grotesk';font-size:1.7em;color:var(--warm-accent)">${big}</div><div class="a">${small}</div></div>`;
   const tiles=`<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">`
     + kpi(t.artists,"artists") + kpi(t.tracks,"tracks")
@@ -2659,9 +2687,11 @@ async function viewOperator(v){
   // Each artist's money follows its own listeners' fees (user-centric), so it is read
   // from the published payout, not streams times the average rate; the pooled figure
   // beside it is what a pro-rata split of the same plays would have paid.
-  const ta=list("Top artists"+(psr?` — user-centric payout, and what a pooled split at ${perStream(psrRaw)}/stream would have paid`:""), d.top_artists, x=>`<div class="rw"><div class="meta"><div class="t">${esc(x.name)}</div><div class="a">${Number(x.streams).toLocaleString(FMT)} streams · ${Number(x.listeners).toLocaleString(FMT)} listener${x.listeners===1?'':'s'}</div></div><div class="dur">${x.earnings!=null?money(x.earnings):money(x.streams*psr)}${x.pooled_would_pay!=null?` <span class="sub">· pooled ${money(x.pooled_would_pay)}</span>`:""}</div></div>`);
+  const ta=list("Top artists"+(d.latest_report?` — user-centric payout, and what a pooled split at ${perStream(psrRaw)}/stream would have paid`:""), d.top_artists, x=>`<div class="rw"><div class="meta"><div class="t">${esc(x.name)}</div><div class="a">${Number(x.streams).toLocaleString(FMT)} streams · ${Number(x.listeners).toLocaleString(FMT)} listener${x.listeners===1?'':'s'}</div></div><div class="dur">${x.earnings!=null?money(x.earnings):money(x.streams*psr)}${x.pooled_would_pay!=null?` <span class="sub">· pooled ${money(x.pooled_would_pay)}</span>`:""}</div></div>`);
   const rp=list("Recent activity", d.recent_plays, x=>`<div class="rw"><div class="meta"><div class="t">${esc(x.title)}</div><div class="a">${esc(x.artist)} · ${x.played_at.replace('T',' ').slice(0,16)}</div></div><div class="dur">${x.seconds}s${x.qualifying?'':' · non-qual'}</div></div>`);
   $("#op").innerHTML=tiles+tt+ta+rp;
+  }catch(e){ if(!(e instanceof FigureError)) throw e;
+    $("#op").innerHTML=`<div class="empty">The dashboard isn't shown: ${esc(e.message)}.</div>`; }
 }
 
 // ---- playback ----
