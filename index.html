@@ -2564,13 +2564,17 @@ async function viewTransparency(v){
     const money=s=>"$"+Number(s||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
     // the shares the charged line prints: the whole against revenue, and the costs under the cap
     // (everything but the pass-through lines the payload names) against the cap's line
-    const passKeys=rev.cap_pass_through_categories||["payment_processing","cdn_bandwidth"];
-    const passThrough=(r.operating_costs||[]).filter(c=>passKeys.includes(c.category)).reduce((a,c)=>a+Number(c.amount||0),0);
-    const passPhrase=esc(rev.cap_pass_through||"the pass-through lines");
+    // NO FALLBACKS HERE. A default set is a wrong money figure that looks fine (the old one was the
+    // pre-2026-09-13 two-line set), and the set changes on Mark's word: without the payload's keys, say nothing.
+    const passKeys=Array.isArray(rev.cap_pass_through_categories)?rev.cap_pass_through_categories:null;
+    if(!passKeys) console.error("transparency: the report has no revenue.cap_pass_through_categories, so the share under the cap is not computed");
+    const passThrough=passKeys?(r.operating_costs||[]).filter(c=>passKeys.includes(c.category)).reduce((a,c)=>a+Number(c.amount||0),0):null;
+    const passPhrase=rev.cap_pass_through?esc(rev.cap_pass_through):null;
+    if(!passPhrase) console.error("transparency: payload has no cap_pass_through; no sentence names the pass-through lines");
     // the songwriters' share and the cap read the revenue after reversals (a payload saved before
     // the reversal line carries none, so the net is the gross)
     const net=rev.net_subscription_revenue!=null?Number(rev.net_subscription_revenue):Number(rev.gross_subscription_revenue);
-    const otherShare=net>0?(Number(rev.total_operating_costs||0)-passThrough)/net*100:0;
+    const otherShare=(passKeys&&net>0)?(Number(rev.total_operating_costs||0)-passThrough)/net*100:null;
     const capPct=(Number(rev.launch_cost_cap||0)*100).toFixed(0);
     const chargedPct=net>0?(Number(rev.operating_costs_charged!=null?rev.operating_costs_charged:rev.total_operating_costs)/net*100).toFixed(1):"0";
     const reversed=Number(rev.revenue_reversals||0);
@@ -2581,7 +2585,7 @@ async function viewTransparency(v){
       ["PRO / publishing ("+(net>0?(Number(rev.pro_royalty_deduction)/net*100).toFixed(2).replace(/\.?0+$/,""):"")+"% of it)", "− "+money(rev.pro_royalty_deduction)],
       ["Operating costs this month (itemized below)", money(rev.total_operating_costs)],
       ["Paid by the launch fund (a memo line, never in the pool)", money(rev.launch_fund_payment||0)],
-      ["Charged to subscribers ("+chargedPct+"% of revenue in all; the costs under the cap's "+capPct+"% line were "+otherShare.toFixed(1)+"%, so the cap "+(Number(rev.launch_fund_payment||0)>0?"bound and the launch fund paid the rest":"did not bind")+" this month)", "− "+money(rev.operating_costs_charged!=null?rev.operating_costs_charged:rev.total_operating_costs)],
+      ["Charged to subscribers ("+chargedPct+"% of revenue in all"+(otherShare!=null?"; the costs under the cap's "+capPct+"% line were "+otherShare.toFixed(1)+"%, so the cap "+(Number(rev.launch_fund_payment||0)>0?"bound and the launch fund paid the rest":"did not bind")+" this month":"; this report does not name its pass-through lines, so the share under the cap is not stated")+")", "− "+money(rev.operating_costs_charged!=null?rev.operating_costs_charged:rev.total_operating_costs)],
       ["Reserve (one-time buffer)", "− "+money(rev.operating_cost_reserve)],
       ["Artist Pool", money(rev.artist_pool), true],
       ["Unattributed revenue redistributed (fees of subscribers who streamed nothing, split in equal shares among the artists others played, each capped at its own listeners’ fees, the rest carried)", money(rev.unattributed_revenue_distributed)],
@@ -2596,7 +2600,7 @@ async function viewTransparency(v){
     const costs=(r.operating_costs||[]).map(c=>`<div class="lrow"><span>&nbsp;&nbsp;${esc(c.category)} — ${esc(c.description||"")}</span><span>${money(c.amount)}</span></div>`).join("");
     const li=r.listening||null;
     // the launch cap's note (the Adviser's wording): did the cap bind this month?
-    const capNote=rev.launch_cost_cap?`<div class="note">${Number(rev.launch_fund_payment||0)>0?`<b>The launch cap bound this month:</b> costs other than ${passPhrase} were ${otherShare.toFixed(1)} percent of revenue, and the launch fund paid the amount above the ${capPct} percent line.`:`<b>The launch cap did not bind this month:</b> costs other than ${passPhrase} were ${otherShare.toFixed(1)} percent of revenue, under the ${capPct} percent line.`}</div>`:"";
+    const capNote=(rev.launch_cost_cap&&otherShare!=null&&passPhrase)?`<div class="note">${Number(rev.launch_fund_payment||0)>0?`<b>The launch cap bound this month:</b> costs other than ${passPhrase} were ${otherShare.toFixed(1)} percent of revenue, and the launch fund paid the amount above the ${capPct} percent line.`:`<b>The launch cap did not bind this month:</b> costs other than ${passPhrase} were ${otherShare.toFixed(1)} percent of revenue, under the ${capPct} percent line.`}</div>`:"";
     const assumed=(li?`<div class="note"><b>Assumed until the first real month.</b> This illustrative month's plays are ${Number(li.mean).toLocaleString()} qualifying plays per person, an estimate from 2025 industry data (80 percent interval ${Number(li.interval[0]).toLocaleString()} to ${Number(li.interval[1]).toLocaleString()}), so the per-stream rate sits between $${Number(li.rate_low).toFixed(4)} and $${Number(li.rate_high).toFixed(4)} across it. More listening means a lower rate and the same money, because the pool is fixed by revenue and costs; what does not move with listening is the pool per subscriber, $${Number(li.pool_per_sub).toFixed(2)} a month.</div>`:"")+capNote;
     $("#tr").innerHTML=`<div class="ledger"><div style="font-family:'Space Grotesk';font-weight:700;color:var(--warm-accent);padding:12px 6px">${esc(r.month||"")}</div>`
       + rows.map(([k,val,em],i)=>`<div class="lrow ${em?'em':''}"><span>${k}</span><span>${val}</span></div>`+(i===0?basis:"")).join("")
