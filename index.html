@@ -2408,7 +2408,7 @@ async function fillCommerce(id){
 }
 function joinTier(){ toast("Fan club opens after the security & legal review."); }
 function buyMerch(){ toast("Merch checkout opens after review — at cost, 0% SOUND margin."); }
-function soundShop(){ toast("SOUND's own shop opens after launch. Profit from SOUND merch lowers our overhead, so more of your subscription reaches artists. Your favorite artists' own merch always stays theirs, at 0% cut."); }
+function soundShop(){ toast("SOUND's own shop opens after launch. Its margin goes to SOUND's reserve, never to the artist pool, and it's itemized in the monthly accounting. Your favorite artists' own merch always stays theirs, at 0% cut."); }
 async function viewAlbum(v, id){
   const seq=_routeSeq;
   try{
@@ -2557,7 +2557,7 @@ async function viewPlays(v){
 }
 
 async function viewTransparency(v){
-  v.innerHTML=`<h2 class="section">Transparency</h2><p class="sub">The whole accounting, in public. To be CPA-reviewed, no login, and the engine that computes it is open-source.</p>
+  v.innerHTML=`<h2 class="section">Transparency</h2><p class="sub">The whole accounting, in public. To be CPA-reviewed, no login, and the engine that computes it will be open-source.</p>
     <div class="note" style="margin:0 0 18px"><b>Make music?</b> Type the streams and listeners your dashboard shows for a month and watch the same plays computed at this rate, with the arithmetic printed underneath: <a href="#/plays" style="color:var(--warm-accent)">Your plays →</a></div><div id="tr"></div>`;
   try{
     const r=await jget("/transparency/latest"); const rev=r.revenue||{};
@@ -2601,7 +2601,7 @@ async function viewTransparency(v){
     $("#tr").innerHTML=`<div class="ledger"><div style="font-family:'Space Grotesk';font-weight:700;color:var(--warm-accent);padding:12px 6px">${esc(r.month||"")}</div>`
       + rows.map(([k,val,em],i)=>`<div class="lrow ${em?'em':''}"><span>${k}</span><span>${val}</span></div>`+(i===0?basis:"")).join("")
       + (costs?`<div style="color:var(--mute);font-size:.85em;padding:12px 6px 2px">Operating costs, itemized</div>`+costs:"")
-      + `</div>`+assumed+`<div class="note"><b>Public vs. private.</b> The accounting, the per-stream rate, the formula, and the open-source engine are public so anyone can verify the math. Each artist's own earnings are private to their dashboard — no leaderboard of paychecks.</div>`;
+      + `</div>`+assumed+`<div class="note"><b>Public vs. private.</b> The accounting, the per-stream rate, the formula and the engine will be public, so anyone can verify the math. Each artist's own earnings are private to their dashboard — no leaderboard of paychecks.</div>`;
   }catch(e){
     $("#tr").innerHTML=`<div class="note">No monthly report published yet. Once SOUND is operating, every month this page will show gross revenue, itemized costs, the artist pool, the per-stream rate, and total streams — reviewed by an independent CPA, at a no-login URL, permanently archived.</div>`;
   }
