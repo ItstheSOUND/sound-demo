@@ -2587,8 +2587,32 @@ async function viewPlays(v){
 async function viewTransparency(v){
   v.innerHTML=`<h2 class="section">Transparency</h2><p class="sub">The whole accounting, in public from launch. To be CPA-reviewed, no login, and the engine that computes it will be open-source.</p>
     <div class="note" style="margin:0 0 18px"><b>Make music?</b> Type the streams and listeners your dashboard shows for a month and watch the same plays computed at this rate, with the arithmetic printed underneath: <a href="#/plays" style="color:var(--warm-accent)">Your plays →</a></div><div id="tr"></div>`;
+  // "No report published" is a fact about the world, so it is said only when THE REPORT REQUEST says it:
+  // a 404 from /transparency/latest, the platform's "no reports published yet". The request has its own
+  // catch, so nothing else on the page can answer that question by throwing something 404-shaped, and
+  // every other failure is said as a failure, never as an absence (QA, 2026-09-24). THIS TRY IS
+  // DELIBERATELY TIGHT: it holds the one report request and nothing else. A request added inside it
+  // would inherit "no report published" on its own 404, so a new request goes outside it.
+  let r;
+  try{ r=await jget("/transparency/latest"); }
+  catch(e){
+    if(e && e.ok===false && e.status===404){ $("#tr").innerHTML=`<div class="note">No monthly report published yet. Once SOUND is operating, every month this page will show gross revenue, itemized costs, the artist pool, the per-stream rate, and total streams — reviewed by an independent CPA, at a no-login URL, permanently archived.</div>`; return; }
+    console.error("transparency: the report request failed", e);
+    $("#tr").innerHTML=`<div class="note">The report couldn't be loaded (${e&&e.ok===false?"the server answered "+esc(String(e.status)):"the server couldn't be reached"}). That's a failure here, not a missing report.</div>`;
+    return;
+  }
+  // an answer that is not a report (empty, or without its month or its revenue) is said as that, not read
+  // as a report missing every figure
+  const notReport = (!r || typeof r!=="object") ? "something that isn't a report"
+    : !r.month ? "a report without its month"
+    : (!r.revenue || typeof r.revenue!=="object") ? "a report without its revenue section" : "";
+  if(notReport){
+    console.error("transparency: the server answered with "+notReport, r);
+    $("#tr").innerHTML=`<div class="note">The server answered with ${notReport}, so nothing is shown. That's a failure here, not a missing report.</div>`;
+    return;
+  }
   try{
-    const r=await jget("/transparency/latest"); const rev=r.revenue||{};
+    const rev=r.revenue;
     // A MISSING MONEY FIGURE REFUSES THE LEDGER, NAMING IT (the Chief Accountant, 2026-09-24). Zero is a
     // plausible accounting value, so a default claims a figure we don't have, and the lines around a
     // blank would still add up to a different pool. Every figure the ledger names is required, and
@@ -2660,7 +2684,10 @@ async function viewTransparency(v){
   }catch(e){
     if(e instanceof FigureError){ console.error("transparency: "+e.message+"; the ledger is not shown");
       $("#tr").innerHTML=`<div class="note">In this report, ${esc(e.message)}, so its ledger isn't shown. Its lines have to add up to the Artist Pool, and a missing figure isn't filled in.</div>`; return; }
-    $("#tr").innerHTML=`<div class="note">No monthly report published yet. Once SOUND is operating, every month this page will show gross revenue, itemized costs, the artist pool, the per-stream rate, and total streams — reviewed by an independent CPA, at a no-login URL, permanently archived.</div>`;
+    // not the report request (that has its own catch above), so this is a fault in the page
+    console.error("transparency: the page failed to show the report", e);
+    $("#tr").innerHTML=`<div class="note">This page failed while showing the report, so nothing is shown. That's a fault here, not a missing report.</div>`;
+    // not rethrown: route() would replace this with its generic message, and this one says more
   }
 }
 
