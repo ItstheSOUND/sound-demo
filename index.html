@@ -1067,7 +1067,7 @@
     d.tracks=(d.tracks||[]).concat(store.studio.tracks); d.albums=(d.albums||[]).concat(store.studio.albums);
     d.merch=(d.merch||[]).concat(store.studio.merch); d.tiers=(d.tiers||[]).concat(store.studio.tiers);
     d.videos=(d.videos||[]).concat(store.studio.videos); return d; }
-  function mergedMerch(id){ const base=GET["/artists/"+id+"/merch"]||{enabled:false,note:"Checkout opens after review; at-cost, 0% SOUND margin.",products:[]};
+  function mergedMerch(id){ const base=GET["/artists/"+id+"/merch"]||{enabled:false,note:"Checkout opens after review. SOUND keeps no commission; the artist sets the price and keeps the margin.",products:[]};
     const d=JSON.parse(JSON.stringify(base)); if(id===ARTIST) d.products=(d.products||[]).concat(store.studio.merch); return d; }
   function mergedFanclub(id){ const base=GET["/artists/"+id+"/fanclub"]||{enabled:false,note:"Memberships open after the security & legal review.",tiers:[]};
     const d=JSON.parse(JSON.stringify(base)); if(id===ARTIST) d.tiers=(d.tiers||[]).concat(store.studio.tiers); return d; }
@@ -2057,7 +2057,7 @@ async function viewStudio(v){
       <details class="addblock"><summary>Add a product</summary>
       <div class="sform">
         <input id="mkTitle" type="text" placeholder="title">
-        <input id="mkPrice" type="text" placeholder="price (at cost)">
+        <input id="mkPrice" type="text" placeholder="your price">
         <input id="mkDesc" type="text" placeholder="description">
         <label style="font-size:.85em;color:var(--mute)">Image <input id="mkImg" type="file" accept="image/*"></label>
         <div><button onclick="addMerch()">Add to storefront</button></div>
@@ -2435,7 +2435,7 @@ async function fillCommerce(id){
   }catch(e){}
 }
 function joinTier(){ toast("Fan club opens after the security & legal review."); }
-function buyMerch(){ toast("Merch checkout opens after review — at cost, 0% SOUND margin."); }
+function buyMerch(){ toast("Merch checkout opens after review. SOUND keeps no commission; the artist sets the price and keeps the margin."); }
 function soundShop(){ toast("SOUND's own shop opens after launch. Its margin will go to SOUND's reserve, never to the artist pool, and will be itemized in the monthly accounting. Your favorite artists' own merch always stays theirs, at 0% cut."); }
 async function viewAlbum(v, id){
   const seq=_routeSeq;
