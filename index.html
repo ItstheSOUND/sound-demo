@@ -1415,6 +1415,21 @@ async function demoLogin(){
 // ---- utils ----
 // esc() now also escapes the apostrophe (&#39;), so a value is safe in BOTH single- and
 // double-quoted attributes. Load-bearing: the onclick='fn(...)' handlers are single-quoted.
+// One sealed figure, one string for every reader. SOUND's accounts are in dollars, so every figure
+// the report pages print is formatted en-US, never in the viewer's locale: a German reader and an
+// American one must be able to quote the same string back at us. A figure the report sends as a
+// decimal string prints from that string, never re-read as a float.
+const FMT = "en-US", DECIMAL = /^(-?)(\d+)(?:\.(\d+))?$/;
+const grouped = d => d.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+// Money: the report's own digits, padded to cents and never rounded. A sub-cent money figure prints
+// as it came, because it is a defect to see, not one to hide. A figure the page computed is a number.
+function money(v){
+  const m = typeof v === "string" && DECIMAL.exec(v);
+  if (m) return "$" + m[1] + grouped(m[2]) + "." + (m[3] || "").padEnd(2, "0");
+  return "$" + Number(v || 0).toLocaleString(FMT, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+// A rate prints exactly as the report sends it; only a computed one is fixed at six places.
+function perStream(v){ return "$" + (typeof v === "string" && DECIMAL.test(v) ? v : Number(v || 0).toFixed(6)); }
 function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 // A JS value going into an HTML attribute (e.g. onclick='fn(${jarg(id)})'). JSON.stringify
 // alone does NOT escape ' or the HTML metacharacters, so a hostile id could break out of the
@@ -1523,7 +1538,7 @@ function relYear(d){ const m=/^(\d{4})-\d{2}-\d{2}/.exec(String(d||"")); return 
 function follows(){ return _lsJSON("sound_follows","{}"); }
 function isFollowing(id){ return !!follows()[id]; }
 function toggleFollow(id){ const F=follows(); if(F[id]) delete F[id]; else F[id]=1; return {ok:_lsSet("sound_follows",JSON.stringify(F)), on:!!F[id]}; }
-function fmtFollowers(n){ return n.toLocaleString()+" follower"+(n===1?"":"s"); }
+function fmtFollowers(n){ return n.toLocaleString(FMT)+" follower"+(n===1?"":"s"); }
 function followArtist(id, btn){
   const r=toggleFollow(id);
   // Never paint a success that didn't happen: if the write was refused, the button would read
@@ -1644,7 +1659,7 @@ function trackRows(list, {reasons=false, showArtistLink=true, plays=false}={}){
         ${reasons&&t.reasons?`<div class="reasons">${t.reasons.map(esc).join(" · ")}</div>`:""}
       </div>
       <button class="heart ${L[t.track_id]?'on':''}" aria-label="Like ${esc(t.title)}" aria-pressed="${L[t.track_id]?'true':'false'}" onclick='like(this,${jarg(t.track_id)})'>${thumbSvg()}</button>
-      ${plays?`<div class="plays" title="Plays on SOUND">${trackPlays(t).toLocaleString()}</div>`:""}
+      ${plays?`<div class="plays" title="Plays on SOUND">${trackPlays(t).toLocaleString(FMT)}</div>`:""}
       <div class="dur">${mmss(t.duration_seconds)}</div>
       <button class="rowmore" aria-label="More actions for ${esc(t.title)}" aria-haspopup="menu" aria-expanded="false" onclick='event.stopPropagation();openTrackMenu(${jarg(t.track_id)},{anchor:this})'><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
     </div>`).join("")+`</div>`;
@@ -1932,14 +1947,13 @@ async function viewStudio(v){
   catch(e){ v.innerHTML=`<div class="empty">Couldn't reach the Studio.</div>`; return; }
   let earn=null;
   try{ earn=await (await fetch("/studio/"+encodeURIComponent(a.id)+"/earnings",{headers:artistHeaders()})).json(); }catch(e){}
-  const money=s=>"$"+Number(s||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
   const earnHtml = (earn && Number(earn.qualifying_streams)>0) ? `
     <div class="sec"><div class="head"><h3 style="color:var(--warm-accent)">Streaming payout</h3></div>
       <div class="ledger" style="max-width:520px">
         <div style="font-family:'Space Grotesk';font-weight:700;color:var(--warm-accent);padding:12px 6px">${esc(monthLabel(earn.month))}</div>
-        <div class="lrow"><span>Your qualifying streams</span><span>${Number(earn.qualifying_streams).toLocaleString()}</span></div>
+        <div class="lrow"><span>Your qualifying streams</span><span>${Number(earn.qualifying_streams).toLocaleString(FMT)}</span></div>
         <div class="lrow em"><span>Your payout, your listeners' fees split by their plays</span><span>${money(earn.payout)}</span></div>
-        <div class="lrow"><span>The same streams at the pooled rate, the pool over everyone's plays ($${Number(earn.per_stream_rate).toFixed(6)})</span><span>${money(earn.at_average_rate!=null?earn.at_average_rate:Number(earn.qualifying_streams)*Number(earn.per_stream_rate))}</span></div>
+        <div class="lrow"><span>The same streams at the pooled rate, the pool over everyone's plays (${perStream(earn.per_stream_rate)})</span><span>${money(earn.at_average_rate!=null?earn.at_average_rate:Number(earn.qualifying_streams)*Number(earn.per_stream_rate))}</span></div>
       </div>
       <div class="note">Your payout is your listeners' money: each subscriber's fee is split among the artists that subscriber played, in proportion to their plays, and your share of every one of those splits adds up here. The public <a href="#/transparency">per-stream rate</a> is the pool over everyone's plays, an average, so your figure sits above or below your streams times the rate depending on how much else your listeners play; no deals and no tiers move it. It's private to you; there's no public leaderboard of paychecks. Storefront, fan-club, and show income are separate and go straight to you.</div>
     </div>` : `
@@ -2367,7 +2381,7 @@ async function viewArtist(v, id){
         <div>
           <h2 class="section" style="margin:0">${esc(a.name)} ${verified} ${founding}</h2>
           ${a.location?`<p class="sub" style="margin:6px 0 0">${esc(a.location)}</p>`:""}
-          <p class="sub" style="margin:6px 0 0">${ml.toLocaleString()} monthly listeners · <span id="followCount">${fmtFollowers(fol)}</span> · ${a.tracks.length} track${a.tracks.length===1?'':'s'}</p>
+          <p class="sub" style="margin:6px 0 0">${ml.toLocaleString(FMT)} monthly listeners · <span id="followCount">${fmtFollowers(fol)}</span> · ${a.tracks.length} track${a.tracks.length===1?'':'s'}</p>
           ${linksHtml}
           <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
             <button class="ghost follow${following?' on':''}" data-fbase="${fbase}" aria-pressed="${following?'true':'false'}" onclick='followArtist(${jarg(id)},this)'>${following?'Following':'Follow'}</button>
@@ -2449,7 +2463,7 @@ async function viewTrack(v, id){
         <div>
           <h2 class="section" style="margin:0">${esc(t.title)}</h2>
           <p class="sub" style="margin:6px 0 0"><a href="#/artist/${esc(encodeURIComponent(t.artist_id))}">${esc(t.artist_id)}</a>${t.album_id?` · <a href="#/album/${esc(encodeURIComponent(t.album_id))}">album</a>`:" · single"}</p>
-          <p class="sub" style="margin:4px 0 0">${trackPlays(t).toLocaleString()} plays on SOUND</p>
+          <p class="sub" style="margin:4px 0 0">${trackPlays(t).toLocaleString(FMT)} plays on SOUND</p>
           <button style="margin-top:12px" onclick='playFrom(${jarg(t.track_id)})'>▶ Play</button>
           <button class="ghost" style="margin:12px 0 0 8px" onclick='addToPlaylist(${jarg(t.track_id)})'>＋ Add to playlist</button>
         </div>
@@ -2561,7 +2575,6 @@ async function viewTransparency(v){
     <div class="note" style="margin:0 0 18px"><b>Make music?</b> Type the streams and listeners your dashboard shows for a month and watch the same plays computed at this rate, with the arithmetic printed underneath: <a href="#/plays" style="color:var(--warm-accent)">Your plays →</a></div><div id="tr"></div>`;
   try{
     const r=await jget("/transparency/latest"); const rev=r.revenue||{};
-    const money=s=>"$"+Number(s||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
     // the shares the charged line prints: the whole against revenue, and the costs under the cap
     // (everything but the pass-through lines the payload names) against the cap's line
     // NO FALLBACKS HERE. A default set is a wrong money figure that looks fine (the old one was the
@@ -2580,7 +2593,7 @@ async function viewTransparency(v){
     const reversed=Number(rev.revenue_reversals||0);
     const rows=[
       ["Subscription revenue", money(rev.gross_subscription_revenue)],
-      ["Refunds and lost disputes, returned to subscribers ("+Number(rev.reversals_refunds||0).toLocaleString()+" refunds, "+Number(rev.reversals_disputes||0).toLocaleString()+" disputes; off revenue before anything is shared)", "− "+money(reversed)],
+      ["Refunds and lost disputes, returned to subscribers ("+Number(rev.reversals_refunds||0).toLocaleString(FMT)+" refunds, "+Number(rev.reversals_disputes||0).toLocaleString(FMT)+" disputes; off revenue before anything is shared)", "− "+money(reversed)],
       ["Revenue after reversals", money(net)],
       ["PRO / publishing ("+(net>0?(Number(rev.pro_royalty_deduction)/net*100).toFixed(2).replace(/\.?0+$/,""):"")+"% of it)", "− "+money(rev.pro_royalty_deduction)],
       ["Operating costs this month (itemized below)", money(rev.total_operating_costs)],
@@ -2589,19 +2602,19 @@ async function viewTransparency(v){
       ["Reserve (one-time buffer)", "− "+money(rev.operating_cost_reserve)],
       ["Artist Pool", money(rev.artist_pool), true],
       ["Unattributed revenue redistributed (fees of subscribers who streamed nothing, split in equal shares among the artists others played, each capped at its own listeners’ fees, the rest carried)", money(rev.unattributed_revenue_distributed)],
-      ["Per-stream rate", "$"+Number((r.rates||{}).base_per_stream_rate||0).toFixed(6), true],
-      ["Qualifying streams", Number((r.streams||{}).qualifying||0).toLocaleString()],
-      ["Trials (Article V): "+Number((r.streams||{}).trials_started||0).toLocaleString()+" started, "+Number((r.streams||{}).trials_converted||0).toLocaleString()+" converted, "+Number((r.streams||{}).trials_ended_unpaid||0).toLocaleString()+" ended without converting, "+Number((r.streams||{}).trials_open||0).toLocaleString()+" still open at month's end; trial plays "+Number((r.streams||{}).trial_paid||0).toLocaleString()+" paid in a first paid month, "+Number((r.streams||{}).trial_unpaid||0).toLocaleString()+" unpaid, "+Number((r.streams||{}).trial_open||0).toLocaleString()+" so far by the open trials", ""],
-      ["Artists paid", Number(r.artists_paid||0).toLocaleString()],
+      ["Per-stream rate", perStream((r.rates||{}).base_per_stream_rate), true],
+      ["Qualifying streams", Number((r.streams||{}).qualifying||0).toLocaleString(FMT)],
+      ["Trials (Article V): "+Number((r.streams||{}).trials_started||0).toLocaleString(FMT)+" started, "+Number((r.streams||{}).trials_converted||0).toLocaleString(FMT)+" converted, "+Number((r.streams||{}).trials_ended_unpaid||0).toLocaleString(FMT)+" ended without converting, "+Number((r.streams||{}).trials_open||0).toLocaleString(FMT)+" still open at month's end; trial plays "+Number((r.streams||{}).trial_paid||0).toLocaleString(FMT)+" paid in a first paid month, "+Number((r.streams||{}).trial_unpaid||0).toLocaleString(FMT)+" unpaid, "+Number((r.streams||{}).trial_open||0).toLocaleString(FMT)+" so far by the open trials", ""],
+      ["Artists paid", Number(r.artists_paid||0).toLocaleString(FMT)],
     ];
     // Why revenue is not the count times the price: the basis, from the payload, under the revenue line.
     const pr=r.pricing||null;
-    const basis=(pr&&r.subscribers&&Number(rev.gross_subscription_revenue)>0)?`<div style="color:var(--mute);font-size:.85em;padding:0 6px 10px">Revenue is not ${Number(r.subscribers).toLocaleString()} times $${Number(pr.list_price).toFixed(2)}. It is what those subscribers actually pay, founding members at their locked rate and subscribers in countries with an accessible regional price included, which averages $${(Number(rev.gross_subscription_revenue)/Number(r.subscribers)).toFixed(2)} a month.</div>`:"";
+    const basis=(pr&&r.subscribers&&Number(rev.gross_subscription_revenue)>0)?`<div style="color:var(--mute);font-size:.85em;padding:0 6px 10px">Revenue is not ${Number(r.subscribers).toLocaleString(FMT)} times $${Number(pr.list_price).toFixed(2)}. It is what those subscribers actually pay, founding members at their locked rate and subscribers in countries with an accessible regional price included, which averages $${(Number(rev.gross_subscription_revenue)/Number(r.subscribers)).toFixed(2)} a month.</div>`:"";
     const costs=(r.operating_costs||[]).map(c=>`<div class="lrow"><span>&nbsp;&nbsp;${esc(c.category)} — ${esc(c.description||"")}</span><span>${money(c.amount)}</span></div>`).join("");
     const li=r.listening||null;
     // the launch cap's note (the Adviser's wording): did the cap bind this month?
     const capNote=(rev.launch_cost_cap&&otherShare!=null&&passPhrase)?`<div class="note">${Number(rev.launch_fund_payment||0)>0?`<b>The launch cap bound this month:</b> costs other than ${passPhrase} were ${otherShare.toFixed(1)} percent of revenue, and the launch fund paid the amount above the ${capPct} percent line.`:`<b>The launch cap did not bind this month:</b> costs other than ${passPhrase} were ${otherShare.toFixed(1)} percent of revenue, under the ${capPct} percent line.`}</div>`:"";
-    const assumed=(li?`<div class="note"><b>Assumed until the first real month.</b> This illustrative month's plays are ${Number(li.mean).toLocaleString()} qualifying plays per person, an estimate from 2025 industry data (80 percent interval ${Number(li.interval[0]).toLocaleString()} to ${Number(li.interval[1]).toLocaleString()}), so the per-stream rate sits between $${Number(li.rate_low).toFixed(4)} and $${Number(li.rate_high).toFixed(4)} across it. More listening means a lower rate and the same money, because the pool is fixed by revenue and costs; what does not move with listening is the pool per subscriber, $${Number(li.pool_per_sub).toFixed(2)} a month.</div>`:"")+capNote;
+    const assumed=(li?`<div class="note"><b>Assumed until the first real month.</b> This illustrative month's plays are ${Number(li.mean).toLocaleString(FMT)} qualifying plays per person, an estimate from 2025 industry data (80 percent interval ${Number(li.interval[0]).toLocaleString(FMT)} to ${Number(li.interval[1]).toLocaleString(FMT)}), so the per-stream rate sits between $${Number(li.rate_low).toFixed(4)} and $${Number(li.rate_high).toFixed(4)} across it. More listening means a lower rate and the same money, because the pool is fixed by revenue and costs; what does not move with listening is the pool per subscriber, $${Number(li.pool_per_sub).toFixed(2)} a month.</div>`:"")+capNote;
     $("#tr").innerHTML=`<div class="ledger"><div style="font-family:'Space Grotesk';font-weight:700;color:var(--warm-accent);padding:12px 6px">${esc(r.month||"")}</div>`
       + rows.map(([k,val,em],i)=>`<div class="lrow ${em?'em':''}"><span>${k}</span><span>${val}</span></div>`+(i===0?basis:"")).join("")
       + (costs?`<div style="color:var(--mute);font-size:.85em;padding:12px 6px 2px">Operating costs, itemized</div>`+costs:"")
@@ -2617,23 +2630,23 @@ async function viewOperator(v){
   let d;
   try{ const r=await fetch("/admin/overview",{headers:adminHeaders()}); if(!r.ok){ $("#op").innerHTML=`<div class="empty">Operator access denied — check your key in Account.</div>`; return; } d=await r.json(); }
   catch(e){ $("#op").innerHTML=`<div class="empty">Couldn't load the dashboard.</div>`; return; }
-  const t=d.totals, money=s=>"$"+Number(s||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
-  const psr=Number((d.latest_report||{}).per_stream_rate||0);   // public per-stream rate; payouts derive from it
+  const t=d.totals;
+  const psrRaw=(d.latest_report||{}).per_stream_rate, psr=Number(psrRaw||0);   // public per-stream rate; payouts derive from it
   const kpi=(big,small)=>`<div class="card" style="cursor:default"><div style="font-family:'Space Grotesk';font-size:1.7em;color:var(--warm-accent)">${big}</div><div class="a">${small}</div></div>`;
   const tiles=`<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">`
     + kpi(t.artists,"artists") + kpi(t.tracks,"tracks")
     + kpi(t.subscribers.active+" / "+t.subscribers.total,"active subscribers")
-    + kpi(t.streams.qualifying.toLocaleString(),"qualifying streams")
+    + kpi(t.streams.qualifying.toLocaleString(FMT),"qualifying streams")
     + kpi(money(d.revenue_run_rate.monthly_estimate),"monthly run-rate")
     + kpi(d.latest_report?money(d.latest_report.artist_pool):"—","latest artist pool")
     + `</div>`;
   const list=(title,rows,fmt)=>`<h3 style="color:var(--warm-accent);margin-top:22px">${title}</h3><div class="rows">`
     + (rows.length?rows.map(fmt).join(""):`<div class="rw">Nothing yet.</div>`)+`</div>`;
-  const tt=list("Top tracks", d.top_tracks, x=>`<div class="rw"><div class="meta"><div class="t">${esc(x.title)}</div><div class="a">${esc(x.artist||x.artist_id||"")}</div></div><div class="dur">${Number(x.streams).toLocaleString()} plays</div></div>`);
+  const tt=list("Top tracks", d.top_tracks, x=>`<div class="rw"><div class="meta"><div class="t">${esc(x.title)}</div><div class="a">${esc(x.artist||x.artist_id||"")}</div></div><div class="dur">${Number(x.streams).toLocaleString(FMT)} plays</div></div>`);
   // Each artist's money follows its own listeners' fees (user-centric), so it is read
   // from the published payout, not streams times the average rate; the pooled figure
   // beside it is what a pro-rata split of the same plays would have paid.
-  const ta=list("Top artists"+(psr?` — user-centric payout, and what a pooled split at $${psr.toFixed(6)}/stream would have paid`:""), d.top_artists, x=>`<div class="rw"><div class="meta"><div class="t">${esc(x.name)}</div><div class="a">${Number(x.streams).toLocaleString()} streams · ${Number(x.listeners).toLocaleString()} listener${x.listeners===1?'':'s'}</div></div><div class="dur">${x.earnings!=null?money(x.earnings):money(x.streams*psr)}${x.pooled_would_pay!=null?` <span class="sub">· pooled ${money(x.pooled_would_pay)}</span>`:""}</div></div>`);
+  const ta=list("Top artists"+(psr?` — user-centric payout, and what a pooled split at ${perStream(psrRaw)}/stream would have paid`:""), d.top_artists, x=>`<div class="rw"><div class="meta"><div class="t">${esc(x.name)}</div><div class="a">${Number(x.streams).toLocaleString(FMT)} streams · ${Number(x.listeners).toLocaleString(FMT)} listener${x.listeners===1?'':'s'}</div></div><div class="dur">${x.earnings!=null?money(x.earnings):money(x.streams*psr)}${x.pooled_would_pay!=null?` <span class="sub">· pooled ${money(x.pooled_would_pay)}</span>`:""}</div></div>`);
   const rp=list("Recent activity", d.recent_plays, x=>`<div class="rw"><div class="meta"><div class="t">${esc(x.title)}</div><div class="a">${esc(x.artist)} · ${x.played_at.replace('T',' ').slice(0,16)}</div></div><div class="dur">${x.seconds}s${x.qualifying?'':' · non-qual'}</div></div>`);
   $("#op").innerHTML=tiles+tt+ta+rp;
 }
