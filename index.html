@@ -1273,8 +1273,9 @@
       // subscriber, split by how much of THEIR month was yours, so per listener = pool per subscriber
       // x plays a month / an average listener's month (the paying plays over the subscribers who
       // played). Past that month the share caps at all of it, and the figure at the pool per
-      // subscriber. The headline above is plays x the published rate, a different divisor; the
-      // gap clause below names why they differ.
+      // subscriber. The headline above is plays x the published rate, a different divisor, so the two
+      // don't add up to each other; the page prints no comparison of them (the gap clause's cause was
+      // false and the stopgap of 2026-09-29 removed it), and test_a197_qa_plants keeps the sum below it.
       var fans = $("fans");
       if (L !== null && !isNaN(L) && L > 0) {
         var ppl = S / L / months;                               // plays per listener per month
