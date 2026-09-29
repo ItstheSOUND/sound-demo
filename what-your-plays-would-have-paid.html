@@ -417,7 +417,7 @@ window.SoundPlays = (function(){
         + "</span>, at " + money(M.pooled_rate, 4) + " a play. On SOUND, <span class=\"pc-num\">" + money(figure) + "</span>, about "
         + (M.rate / M.pooled_rate).toLocaleString("en-US", {maximumFractionDigits: 1}) + " times as much.";
       $("pooled-caption").textContent = "The pooled figure is " + M.pooled_source
-        + " It is the recording side only, no songwriter money.";
+        + " It is the recording side only, no songwriter money. Both figures are paid to whoever holds the recording's rights, so a signed artist gets the share their label passes on.";
       var w = Math.max(2, Math.round(pooled / figure * 100));
       $("bar-pooled").style.width = w + "%";
       $("bar-pooled-val").textContent = money(pooled);
