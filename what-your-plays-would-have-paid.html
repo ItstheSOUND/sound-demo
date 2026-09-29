@@ -150,7 +150,7 @@ footer p{color:var(--pc-mute);}
   </div>
   <div class="pc-field">
     <label for="listeners">Listeners</label>
-    <p class="pc-hint" id="listeners-hint">How many people those plays came from, for the same window. Leave it blank and the page still shows the figure; fill it in and it shows what each listener sent you.</p>
+    <p class="pc-hint" id="listeners-hint">How many people those plays came from, for the same window. Leave it blank and the page still shows the figure; fill it in and it shows what each listener would have sent you.</p>
     <input type="text" id="listeners" name="listeners" inputmode="numeric" aria-describedby="listeners-hint listeners-err" placeholder="500">
     <p class="pc-err" id="listeners-err" role="alert"></p>
   </div>
@@ -303,6 +303,7 @@ window.SoundPlays = (function(){
   var shown = function(v){ return Number(money(v).replace(/[$,]/g, "")); };
   var int = function(v){ return Number(v).toLocaleString("en-US"); };
   var pct = function(v){ return Number(v).toLocaleString("en-US", {minimumFractionDigits: 1, maximumFractionDigits: 1}) + " percent"; };
+  var count = function(n, one, many){ return int(n) + " " + (n === 1 ? one : many); };   // "1 play", "2 plays"
   var times = function(v){
     var r = Math.round(v * 10) / 10;
     return (r === Math.round(r) ? int(r) : r.toLocaleString("en-US", {minimumFractionDigits: 1, maximumFractionDigits: 1}))
@@ -348,7 +349,7 @@ window.SoundPlays = (function(){
       var yearFigure = byYear ? figure : 12 * shown(figure);
       var windowWord = byYear ? "the 12 months" : "the month";
       $("figure").textContent = money(figure);
-      $("figure-note").textContent = "for " + windowWord + ", " + int(S) + " plays at the published rate of " + money(M.rate, 6)
+      $("figure-note").textContent = "for " + windowWord + ", " + count(S, "play", "plays") + " at the published rate of " + money(M.rate, 6)
         + " a play. SOUND's illustrative month: " + int(M.subscribers) + " subscribers in the model. Illustrative and assumed, pre-launch.";
       $("year-line").innerHTML = byYear
         ? "That is the year as you entered it: <span class=\"pc-num\">" + money(yearFigure) + "</span>."
@@ -375,10 +376,10 @@ window.SoundPlays = (function(){
         var who = int(L) + (L === 1 ? " listener" : " listeners") + " played you " + times(ppl) + (L === 1 ? "" : " each") + " a month, ";
         var line = whole
           ? who + "at least as many plays as an average listener's whole month, so this assumes you were all they played: "
-            + (L === 1 ? "that listener" : "each of them") + " sent you their whole share of the pool, " + sent
-            + ". That is an average subscriber's share; a Founding Member or a subscriber on an accessible price sends less."
+            + (L === 1 ? "that listener" : "each of them") + " would have sent you their whole share of the pool, " + sent
+            + ". That is an average subscriber's share; a Founding Member or a subscriber on an accessible price would send less."
           : who + pct(share * 100) + " of an average listener's month on SOUND (" + Number(M.listener_month).toLocaleString("en-US", {maximumFractionDigits: 3}) + " plays). "
-            + (L === 1 ? "That listener" : "Each of them") + " sent you " + sent + ".";
+            + (L === 1 ? "That listener" : "Each of them") + " would have sent you " + sent + ".";
         $("fans-line").innerHTML = line;
         // Money follows the fan: a listener's month is a fee, split by how much of their
         // own listening was yours, so the same plays are worth more from a light listener
@@ -392,14 +393,14 @@ window.SoundPlays = (function(){
         var yours = times(ppl) === "1 time" ? "one play" : times(ppl).replace(" times", " plays").replace(" time", " play");
         $("fans-types").innerHTML = "That is the average listener, " + plays(Math.round(M.listener_month)) + " plays a month, and averages hide the shape of listening. "
           + "A typical fan plays less, about " + plays(L_.median) + " a month, so " + yours + " are " + pct(Math.min(1, ppl / L_.median) * 100)
-          + " of their month and worth " + pair(typical) + "; a heavy listener, in the top quarter at " + plays(L_.heavy)
-          + " plays or more, sends " + pair(heavy) + " for the same plays.";
+          + " of their month and would be worth " + pair(typical) + "; a heavy listener, in the top quarter at " + plays(L_.heavy)
+          + " plays or more, would send " + pair(heavy) + " for the same plays.";
         $("fans-good-text").innerHTML = (ppl >= L_.light
-          ? "A light listener, " + plays(L_.light) + " plays a month or fewer, who plays you and nothing else sends you their whole share of the pool, <span class=\"pc-num\">" + money(M.pool_per_sub_year) + "</span> over a year of months like this one."
-          : "A light listener, about " + plays(L_.light) + " plays a month, the bottom quarter's ceiling, who still gives you " + yours + " sends " + pair(light) + ".");
+          ? "A light listener, " + plays(L_.light) + " plays a month or fewer, who plays you and nothing else would send you their whole share of the pool, <span class=\"pc-num\">" + money(M.pool_per_sub_year) + "</span> over a year of months like this one."
+          : "A light listener, about " + plays(L_.light) + " plays a month, the bottom quarter's ceiling, who still gives you " + yours + " would send " + pair(light) + ".");
         var refMonth = M.pool_per_sub_month * Math.min(1, M.reference_plays / M.listener_month);   // A-197, as the fan line
         var refYear = 12 * shown(refMonth);
-        $("fans-ref").innerHTML = "For scale: a fan who plays you " + M.reference_plays + " times a month sends you <span class=\"pc-num\">"
+        $("fans-ref").innerHTML = "For scale: a fan who plays you " + M.reference_plays + " times a month would send you <span class=\"pc-num\">"
           + money(refMonth) + "</span> a month, <span class=\"pc-num\">" + money(refYear) + "</span> a year.";
         fans.hidden = false;
       } else {
@@ -413,9 +414,15 @@ window.SoundPlays = (function(){
         + ", at an assumed " + money(M.rate_1m, 6) + " a play.";
 
       var pooled = S * M.pooled_rate;
-      $("pooled-line").innerHTML = "The same " + int(S) + " plays on the pooled model: <span class=\"pc-num\">" + money(pooled)
-        + "</span>, at " + money(M.pooled_rate, 4) + " a play. On SOUND, <span class=\"pc-num\">" + money(figure) + "</span>, about "
-        + (M.rate / M.pooled_rate).toLocaleString("en-US", {maximumFractionDigits: 1}) + " times as much.";
+      // The multiple is the ratio of the two rates AS PRINTED, beside them, so a reader who divides the
+      // printed rates gets the printed multiple (the Chief Accountant, 2026-09-28: $0.009834 / $0.0030 =
+      // 3.278, about 3.3). Beside the two amounts it misled: $0.11 against $0.03 divides to 3.7.
+      var rateShown = money(M.rate, 6), pooledShown = money(M.pooled_rate, 4);
+      var multiple = Math.round(Number(rateShown.replace(/[$,]/g, "")) / Number(pooledShown.replace(/[$,]/g, "")) * 10) / 10;
+      $("pooled-line").innerHTML = "The same " + count(S, "play", "plays") + " on the pooled model: <span class=\"pc-num\">" + money(pooled)
+        + "</span>, at " + pooledShown + " a play. On SOUND, <span class=\"pc-num\">" + money(figure) + "</span>, at "
+        + rateShown + " a play: SOUND's published rate is about "
+        + multiple.toLocaleString("en-US", {maximumFractionDigits: 1}) + " times the pooled rate.";
       $("pooled-caption").textContent = "The pooled figure is " + M.pooled_source
         + " It is the recording side only, no songwriter money. Both figures are paid to whoever holds the recording's rights, so a signed artist gets the share their label passes on.";
       var w = Math.max(2, Math.round(pooled / figure * 100));
