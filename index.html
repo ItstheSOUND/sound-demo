@@ -1343,9 +1343,6 @@
         + money(figure1mLine) + "</span>, at " + money(M.rate_1m_ceiling, 6) + " a play.";
 
       var pooled = S * M.pooled_rate;
-      // The multiple is the ratio of the two rates AS PRINTED, beside them, so a reader who divides the
-      // printed rates gets the printed multiple (the Chief Accountant, 2026-09-28: $0.009834 / $0.0030 =
-      // 3.278, about 3.3). Beside the two amounts it misled: $0.11 against $0.03 divides to 3.7.
       var rateShown = money(M.rate, 6), pooledShown = money(M.pooled_rate, 4);
       var multiple = Math.round(Number(rateShown.replace(/[$,]/g, "")) / Number(pooledShown.replace(/[$,]/g, "")) * 10) / 10;
       $("pooled-line").innerHTML = "The same " + count(S, "play", "plays") + " on the pooled model: <span class=\"pc-num\">" + money(pooled)
