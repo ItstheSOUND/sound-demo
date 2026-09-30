@@ -1552,6 +1552,8 @@ function seedFloat(seed){ return _fnv(seed)/4294967295; }                       
 function seedInt(seed,min,max){ return min + (_fnv(seed)%(max-min+1)); }
 // Every figure the demo prints from these seeds or from the illustrative month's fixture says so, in these words.
 const SIM_NOTE="simulated for the demo";
+// And where a visitor meets the catalog, one plain statement that the catalog itself is invented.
+const DEMO_FICTION="The artists, music and products here are fictional demo content.";
 // Reconcile every artist metric with the operator dashboard: if the artist appears in the
 // published monthly report (top_artists), all of their derived numbers — headline listeners,
 // followers, and per-track play counts — key off THAT listener count, so no two surfaces ever
@@ -1814,7 +1816,7 @@ function styleChipsHTML(fam, active){
     + fam.styles.map(s=>`<a class="chip${s.key===active?' on':''}" href="#/genre/${encodeURIComponent(s.key)}"${s.key===active?' aria-current="page"':''}>${esc(s.label)}<span class="chip-n">${s.count}</span></a>`).join("") + `</div>`;
 }
 async function viewHome(v){
-  v.innerHTML = `<div class="hero"><h1>Music that pays its makers</h1><p>Your subscription reaches the artists you actually played — not a chart. Hit play, and watch exactly where the money goes.</p></div>
+  v.innerHTML = `<div class="hero"><h1>Music that pays its makers</h1><p>Your subscription reaches the artists you actually played — not a chart. Hit play, and watch exactly where the money goes.</p><p class="sub" style="margin:10px 0 0">${DEMO_FICTION}</p></div>
     <div id="chips" class="chips"></div>
     <div id="rcnt" class="sec"></div>
     <div id="bqp" class="sec"></div>
@@ -2728,7 +2730,7 @@ async function viewTransparency(v){
 }
 
 async function viewOperator(v){
-  v.innerHTML=`<h2 class="section">Operator dashboard</h2><p class="sub">Platform behavior at a glance — health, catalog, economics. Individual listener identities are deliberately not shown (Article XIV).</p><p class="sub">Every figure here is ${SIM_NOTE}, from SOUND's illustrative month.</p><div id="op"></div>`;
+  v.innerHTML=`<h2 class="section">Operator dashboard</h2><p class="sub">Platform behavior at a glance — health, catalog, economics. Individual listener identities are deliberately not shown (Article XIV).</p><p class="sub">The subscriber, stream and money figures here are ${SIM_NOTE}, from SOUND's illustrative month.</p><div id="op"></div>`;
   if(!opKey()){ $("#op").innerHTML=`<div class="empty">Add your operator key in <button class="linkish" onclick="openCreds()">Account</button> to view platform behavior.</div>`; return; }
   let d;
   try{ const r=await fetch("/admin/overview",{headers:adminHeaders()}); if(!r.ok){ $("#op").innerHTML=`<div class="empty">Operator access denied — check your key in Account.</div>`; return; } d=await r.json(); }
