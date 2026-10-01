@@ -1133,7 +1133,7 @@
         // the pooled counterfactual on one basis everywhere: the pool over everyone's plays
         // (the exact rate the Operator page uses), not the six-decimal printed rate
         const pooled=row&&row.pooled_would_pay!=null?Number(row.pooled_would_pay):streams*rate;
-        return resp({month:rep.month||null, qualifying_streams:streams,
+        return resp({month:rep.month||null, nature:rep.nature, qualifying_streams:streams,
           per_stream_rate:rep.per_stream_rate||"0", payout:payout.toFixed(2), at_average_rate:pooled.toFixed(2)}); }
       if(p.indexOf("/studio/")===0){ const id=decodeURIComponent(p.slice(8)); const d=studioData(id);
         return d?resp(d):resp({detail:"not found"},404); }
@@ -1997,10 +1997,14 @@ async function viewStudio(v){
   catch(e){ v.innerHTML=`<div class="empty">Couldn't reach the Studio.</div>`; return; }
   let earn=null;
   try{ earn=await (await fetch("/studio/"+encodeURIComponent(a.id)+"/earnings",{headers:artistHeaders()})).json(); }catch(e){}
-  let earnHtml; try{ earnHtml = (earn && Number(earn.qualifying_streams)>0) ? `
+  let earnHtml; try{
+    // A-227: the label reads the month's nature and nothing else; a month that doesn't say isn't shown
+    if(earn && Number(earn.qualifying_streams)>0 && earn.nature!=="measured" && earn.nature!=="illustrative")
+      throw new FigureError("its month doesn't say whether it was measured or modeled");
+    earnHtml = (earn && Number(earn.qualifying_streams)>0) ? `
     <div class="sec"><div class="head"><h3 style="color:var(--warm-accent)">Streaming payout</h3></div>
       <div class="ledger" style="max-width:520px">
-        <div style="font-family:'Space Grotesk';font-weight:700;color:var(--warm-accent);padding:12px 6px">The illustrative month, ${SIM_NOTE}</div>
+        ${earn.nature==="illustrative"?`<div style="font-family:'Space Grotesk';font-weight:700;color:var(--warm-accent);padding:12px 6px">The illustrative month, ${SIM_NOTE}</div>`:""}
         <div class="lrow"><span>Your qualifying streams</span><span>${Number(earn.qualifying_streams).toLocaleString(FMT)}</span></div>
         <div class="lrow em"><span>Your payout, your listeners' fees split by their plays</span><span>${money(earn.payout)}</span></div>
         <div class="lrow"><span>The same streams at the pooled rate, the pool over everyone's plays (${perStream(earn.per_stream_rate)})</span><span>${money(earn.at_average_rate!=null?earn.at_average_rate:Number(earn.qualifying_streams)*Number(earn.per_stream_rate))}</span></div>
