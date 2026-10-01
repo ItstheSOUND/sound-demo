@@ -2000,7 +2000,7 @@ async function viewStudio(v){
   let earnHtml; try{
     // A-227: the label reads the month's nature and nothing else; a month that doesn't say isn't shown
     if(earn && Number(earn.qualifying_streams)>0 && earn.nature!=="measured" && earn.nature!=="illustrative")
-      throw new FigureError("its month doesn't say whether it was measured or modeled");
+      throw new FigureError("its month doesn't say whether it was measured or illustrative");
     earnHtml = (earn && Number(earn.qualifying_streams)>0) ? `
     <div class="sec"><div class="head"><h3 style="color:var(--warm-accent)">Streaming payout</h3></div>
       <div class="ledger" style="max-width:520px">
@@ -2643,14 +2643,18 @@ async function viewTransparency(v){
     $("#tr").innerHTML=`<div class="note">The report couldn't be loaded (${e&&e.ok===false?"the server answered "+esc(String(e.status)):"the server couldn't be reached"}). That's a failure here, not a missing report.</div>`;
     return;
   }
+  // A-227 (the Chief Accountant, on A-111): the month says whether it was measured or illustrative, and the label
+  // is read from that field alone. A month that doesn't say is WITHHELD by the platform, its month named and none of
+  // its figures sent, so it is said first and as what it is: not a failure, and never shown as measured (QA's F1).
+  if(r && typeof r==="object" && r.month && r.nature!=="measured" && r.nature!=="illustrative"){
+    $("#tr").innerHTML=`<div class="note">The report for ${esc(String(r.month))} isn't shown: ${esc(r.withheld||"this month doesn't say whether it was measured or illustrative, so none of its figures are shown")}.</div>`;
+    return;
+  }
   // an answer that is not a report (empty, or without its month or its revenue) is said as that, not read
   // as a report missing every figure
   const notReport = (!r || typeof r!=="object") ? "something that isn't a report"
     : !r.month ? "a report without its month"
-    : (!r.revenue || typeof r.revenue!=="object") ? "a report without its revenue section"
-    // A-227 (the Chief Accountant, on A-111): the month says whether it was measured or modeled, and the
-    // label is read from that field alone. One that doesn't say is not shown, never shown as measured.
-    : (r.nature!=="measured" && r.nature!=="illustrative") ? "a report that doesn't say whether its month was measured or modeled" : "";
+    : (!r.revenue || typeof r.revenue!=="object") ? "a report without its revenue section" : "";
   if(notReport){
     console.error("transparency: the server answered with "+notReport, r);
     $("#tr").innerHTML=`<div class="note">The server answered with ${notReport}, so nothing is shown. That's a failure here, not a missing report.</div>`;
@@ -2738,7 +2742,7 @@ async function viewTransparency(v){
 }
 
 async function viewOperator(v){
-  v.innerHTML=`<h2 class="section">Operator dashboard</h2><p class="sub">Platform behavior at a glance — health, catalog, economics. Individual listener identities are deliberately not shown (Article XIV).</p><p class="sub">The subscriber, stream and money figures here are ${SIM_NOTE}, from SOUND's illustrative month.</p><div id="op"></div>`;
+  v.innerHTML=`<h2 class="section">Operator dashboard</h2><p class="sub">Platform behavior at a glance — health, catalog, economics. Individual listener identities are deliberately not shown (Article XIV).</p><div id="op"></div>`;
   if(!opKey()){ $("#op").innerHTML=`<div class="empty">Add your operator key in <button class="linkish" onclick="openCreds()">Account</button> to view platform behavior.</div>`; return; }
   let d;
   try{ const r=await fetch("/admin/overview",{headers:adminHeaders()}); if(!r.ok){ $("#op").innerHTML=`<div class="empty">Operator access denied — check your key in Account.</div>`; return; } d=await r.json(); }
@@ -2752,17 +2756,23 @@ async function viewOperator(v){
     + kpi(t.subscribers.active+" / "+t.subscribers.total,"active subscribers")
     + kpi(t.streams.qualifying.toLocaleString(FMT),"qualifying streams")
     + kpi(money(d.revenue_run_rate.monthly_estimate),"monthly run-rate")
-    + kpi(d.latest_report?money(d.latest_report.artist_pool):"—","latest artist pool")
+    + kpi(d.latest_report&&("artist_pool" in d.latest_report)?money(d.latest_report.artist_pool):"—","latest artist pool")
     + `</div>`;
+  // the month's nature (A-227), ui.py's rule: an illustrative month says so; a month without one shows none of its
+  // figures and says why; a measured month carries no label (QA's F2)
+  const rep=d.latest_report;
+  const nature=!rep?"":rep.nature==="illustrative"
+    ?`<p class="sub">The subscriber, stream and money figures here are ${SIM_NOTE}, from SOUND's illustrative month.</p>`
+    :rep.nature==null?`<div class="note">${esc(rep.withheld||"The latest month carries no nature, so its figures aren't shown.")}</div>`:"";
   const list=(title,rows,fmt)=>`<h3 style="color:var(--warm-accent);margin-top:22px">${title}</h3><div class="rows">`
     + (rows.length?rows.map(fmt).join(""):`<div class="rw">Nothing yet.</div>`)+`</div>`;
   const tt=list("Top tracks", d.top_tracks, x=>`<div class="rw"><div class="meta"><div class="t">${esc(x.title)}</div><div class="a">${esc(x.artist||x.artist_id||"")}</div></div><div class="dur">${Number(x.streams).toLocaleString(FMT)} plays</div></div>`);
   // Each artist's money follows its own listeners' fees (user-centric), so it is read
   // from the published payout, not streams times the average rate; the pooled figure
   // beside it is what a pro-rata split of the same plays would have paid.
-  const ta=list("Top artists"+(d.latest_report?` — user-centric payout, and what a pooled split at ${perStream(psrRaw)}/stream would have paid`:""), d.top_artists, x=>`<div class="rw"><div class="meta"><div class="t">${esc(x.name)}</div><div class="a">${Number(x.streams).toLocaleString(FMT)} streams · ${Number(x.listeners).toLocaleString(FMT)} listener${x.listeners===1?'':'s'}</div></div><div class="dur">${x.earnings!=null?money(x.earnings):money(x.streams*psr)}${x.pooled_would_pay!=null?` <span class="sub">· pooled ${money(x.pooled_would_pay)}</span>`:""}</div></div>`);
+  const ta=list("Top artists"+(d.latest_report&&psrRaw!=null?` — user-centric payout, and what a pooled split at ${perStream(psrRaw)}/stream would have paid`:""), d.top_artists, x=>`<div class="rw"><div class="meta"><div class="t">${esc(x.name)}</div><div class="a">${Number(x.streams).toLocaleString(FMT)} streams · ${Number(x.listeners).toLocaleString(FMT)} listener${x.listeners===1?'':'s'}</div></div><div class="dur">${x.earnings!=null?money(x.earnings):money(x.streams*psr)}${x.pooled_would_pay!=null?` <span class="sub">· pooled ${money(x.pooled_would_pay)}</span>`:""}</div></div>`);
   const rp=list("Recent activity", d.recent_plays, x=>`<div class="rw"><div class="meta"><div class="t">${esc(x.title)}</div><div class="a">${esc(x.artist)} · ${x.played_at.replace('T',' ').slice(0,16)}</div></div><div class="dur">${x.seconds}s${x.qualifying?'':' · non-qual'}</div></div>`);
-  $("#op").innerHTML=tiles+tt+ta+rp;
+  $("#op").innerHTML=nature+tiles+tt+ta+rp;
   }catch(e){ if(!(e instanceof FigureError)) throw e;
     $("#op").innerHTML=`<div class="empty">The dashboard isn't shown: ${esc(e.message)}.</div>`; }
 }
