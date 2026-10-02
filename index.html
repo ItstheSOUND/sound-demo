@@ -2647,7 +2647,9 @@ async function viewTransparency(v){
   // is read from that field alone. A month that doesn't say is WITHHELD by the platform, its month named and none of
   // its figures sent, so it is said first and as what it is: not a failure, and never shown as measured (QA's F1).
   if(r && typeof r==="object" && r.month && r.nature!=="measured" && r.nature!=="illustrative"){
-    $("#tr").innerHTML=`<div class="note">The report for ${esc(String(r.month))} isn't shown: ${esc(r.withheld||"this month doesn't say whether it was measured or illustrative, so none of its figures are shown")}.</div>`;
+    const ym=String(r.month).split("-"), mn=["January","February","March","April","May","June","July","August",
+      "September","October","November","December"][(+ym[1]||0)-1];
+    $("#tr").innerHTML=`<div class="note">The report for ${esc(mn?mn+" "+ym[0]:String(r.month))} isn't shown: ${esc(r.withheld||"this month doesn't say whether it was measured or illustrative, so none of its figures are shown")}.</div>`;
     return;
   }
   // an answer that is not a report (empty, or without its month or its revenue) is said as that, not read
