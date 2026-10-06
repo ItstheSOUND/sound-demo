@@ -142,6 +142,25 @@
   /* on the genre view the chips pin to the top so you can switch genres without scrolling back */
   .chips-sticky{position:sticky;top:0;z-index:3;background:var(--bg);padding:10px 0 8px;margin-bottom:10px;}
   .chips-styles{margin:-2px 0 14px;}
+  /* genres as a row of cards that scrolls sideways (Mark, 10/6): one row at every width, the page itself never
+     scrolls sideways; the focus ring sits inside the row's padding so the overflow can't clip it */
+  .rail-wrap{display:flex;align-items:center;gap:6px;margin:0 0 6px;}
+  .rail{list-style:none;margin:0;padding:6px;display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x proximity;
+        scroll-padding-inline:6px;scrollbar-width:thin;flex:1;min-width:0;}
+  .rail li{flex:0 0 auto;scroll-snap-align:start;}
+  .gcard{display:flex;flex-direction:column;justify-content:center;min-width:128px;min-height:60px;box-sizing:border-box;
+         padding:10px 14px;border-radius:12px;background:var(--card2);color:var(--ink);text-decoration:none;
+         font-weight:700;font-size:.92em;line-height:1.2;}
+  .gcard-n{font-weight:500;font-size:.82em;color:var(--mute);margin-top:3px;}
+  .gcard.on{background:var(--amber);color:#2a1a0c;box-shadow:inset 0 0 0 2px #2a1a0c;}   /* the card in view: its border carries the state, not the amber alone (1.4.11) */
+  .gcard.on .gcard-n{color:#2a1a0c;}
+  .gcard:focus-visible{outline:3px solid var(--focus-ring);outline-offset:-3px;}
+  .rail-styles .gcard{min-width:104px;min-height:48px;font-size:.85em;}
+  .rail-btn{flex:0 0 auto;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--card);
+            color:var(--ink);font-size:1.1em;line-height:1;cursor:pointer;padding:0;}
+  .rail-btn:focus-visible{outline:3px solid var(--focus-ring);outline-offset:2px;}
+  .rail-btn[hidden]{display:none;}
+  @media (prefers-reduced-motion:no-preference){.rail{scroll-behavior:smooth;}}
   .chip .chip-n{opacity:.8;font-weight:500;margin-left:4px;}
   .chip{background:var(--card2);color:var(--ink);border-radius:999px;padding:6px 13px;min-height:24px;display:inline-flex;align-items:center;font-size:.82em;font-weight:600;text-decoration:none;cursor:pointer;}
   .chip.on{background:var(--amber);color:#2a1a0c;}
@@ -614,6 +633,8 @@
     .sub{font-size:1em;}
     .grid{grid-template-columns:repeat(2,1fr);}
     .chips .chip{font-size:.92em;padding:8px 14px;}
+    .rail-btn{display:none;}                            /* a phone swipes the row; the buttons are for a mouse */
+    .gcard{min-width:116px;min-height:56px;}
     .cardv{width:46vw;max-width:210px;}                 /* bigger cards to swipe through */
     .cardv.featured{width:100%;max-width:none;grid-template-columns:120px minmax(0,1fr);column-gap:12px;}
     .cardv.featured .cover{height:120px;}
@@ -1775,7 +1796,7 @@ async function route(){
     else p=viewHome(v);
     await p;
   }catch(e){ v.innerHTML=`<div class="empty">Something went wrong loading this view.</div>`; }
-  markPlayingRow(); initShelves(); _labelFields();   // post-render: highlight the playing track, set shelf scroll-hints, give placeholder-only fields an accessible name
+  markPlayingRow(); initShelves(); _labelFields(); railReveal();   // post-render: highlight the playing track, set shelf scroll-hints, give placeholder-only fields an accessible name
 }
 // SC 3.3.2 / 4.1.2: a placeholder is not a reliable label. Give any field with no <label> and no
 // aria-label an accessible name from its placeholder. Skips fields that already have either, so
@@ -1803,21 +1824,58 @@ function npGo(){ if(current && current.artist_id){ go("#/artist/"+encodeURICompo
 // families without going back: "All", then every one of the 18 families, always.
 // A family with nothing in it is still a door; its page says so. `active` is
 // the family or style key in view, or null for "All" (Home).
-function genreChipsHTML(families, active){
-  return `<a class="chip${!active?' on':''}" href="#/"${!active?' aria-current="page"':''}>All</a>`
-    + (families||[]).map(f=>{ const on=f.key===active||(f.styles||[]).some(s=>s.key===active);
-        return `<a class="chip${on?' on':''}" href="#/genre/${encodeURIComponent(f.key)}"${on?' aria-current="page"':''}>${esc(f.label)}</a>`; }).join("");
+// One row of cards that scrolls sideways (Mark, 10/6): a labelled nav, a list of links, the card in view marked
+// aria-current. Tab walks the cards (the browser keeps the focused one in view) and leaves past the last, so there
+// is no trap; the prev/next buttons are for a mouse, whose wheel can't scroll sideways.
+function railHTML(id, label, items, extra){
+  return `<nav class="rail-wrap${extra?' '+extra:''}" aria-label="${esc(label)}">`
+    + `<button type="button" class="rail-btn" aria-controls="${id}" aria-label="Scroll ${esc(label.toLowerCase())} left" onclick="railScroll(this,-1)">‹</button>`
+    + `<ul class="rail" id="${id}" role="list">` + items.map(it=>`<li><a class="gcard${it.on?' on':''}" href="${it.href}"${it.on?' aria-current="page"':''}>${esc(it.label)}<span class="gcard-n">${esc(it.note)}</span></a></li>`).join("") + `</ul>`
+    + `<button type="button" class="rail-btn" aria-controls="${id}" aria-label="Scroll ${esc(label.toLowerCase())} right" onclick="railScroll(this,1)">›</button></nav>`;
+}
+function railScroll(btn, dir){
+  const r=document.getElementById(btn.getAttribute("aria-controls")); if(!r) return;
+  const still=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  r.scrollBy({left:dir*Math.round(r.clientWidth*0.8), behavior:still?"auto":"smooth"});
+}
+// the scroll buttons only where a row overflows (a row that fits has nothing to page through)
+function railButtons(){
+  document.querySelectorAll('.rail').forEach(r=>{ const fits=r.scrollWidth<=r.clientWidth+1;
+    r.parentElement.querySelectorAll('.rail-btn').forEach(b=>{ b.hidden=fits; }); });
+}
+window.addEventListener("resize", railButtons);
+// the card in view, scrolled into its row (not the page) when a view renders
+function railReveal(){
+  railButtons();
+  document.querySelectorAll('.rail [aria-current="page"]').forEach(a=>{ const r=a.closest(".rail");
+    if(r) r.scrollLeft=Math.max(0, a.parentElement.offsetLeft-r.offsetLeft-8); });
+}
+// A card that takes keyboard focus is brought fully into its row. Chrome's own focus scroll stops at partly
+// visible, and a "nearest" scroll lands mid-card where the row's snap pulls it back to a card start, leaving the
+// focused card's end outside (measured at 375, 10/6). So a card not wholly in view is aligned to the row's start,
+// the place the snap rests anyway.
+function railFocus(e){
+  const a=e.target; if(!(a && a.classList && a.classList.contains("gcard"))) return;
+  const r=a.closest(".rail"), b=a.getBoundingClientRect(), rr=r.getBoundingClientRect();
+  if(b.left < rr.left || b.right > rr.right) r.scrollLeft=Math.max(0, a.parentElement.offsetLeft-r.offsetLeft-6);
+}
+document.addEventListener("focusin", railFocus);
+function genreRailHTML(families, active){
+  const n=c=>`${c} track${c===1?'':'s'}`;
+  return railHTML("rail-genres", "Genres", [{href:"#/", label:"All", note:"Everything", on:!active}]
+    .concat((families||[]).map(f=>({href:"#/genre/"+encodeURIComponent(f.key), label:f.label, note:n(f.count||0),
+      on:f.key===active||(f.styles||[]).some(s=>s.key===active)}))));
 }
 // Under a family: the styles at least one track carries, and only those (the
 // taxonomy's rule 3), each with its count.
-function styleChipsHTML(fam, active){
+function styleRailHTML(fam, active){
   if(!fam || !(fam.styles||[]).length) return "";
-  return `<div class="chips chips-styles" aria-label="Styles in ${esc(fam.label)}">`
-    + fam.styles.map(s=>`<a class="chip${s.key===active?' on':''}" href="#/genre/${encodeURIComponent(s.key)}"${s.key===active?' aria-current="page"':''}>${esc(s.label)}<span class="chip-n">${s.count}</span></a>`).join("") + `</div>`;
+  return railHTML("rail-styles", "Styles in "+fam.label, fam.styles.map(s=>({href:"#/genre/"+encodeURIComponent(s.key),
+    label:s.label, note:`${s.count} track${s.count===1?'':'s'}`, on:s.key===active})), "rail-styles chips-styles");
 }
 async function viewHome(v){
   v.innerHTML = `<div class="hero"><h1>Music that pays its makers</h1><p>Your subscription reaches the artists you actually played — not a chart. Hit play, and watch exactly where the money goes.</p><p class="sub" style="margin:10px 0 0">${DEMO_FICTION}</p></div>
-    <div id="chips" class="chips"></div>
+    <div id="chips"></div>
     <div id="rcnt" class="sec"></div>
     <div id="bqp" class="sec"></div>
     <div class="sec"><div class="head"><h2 class="section">Playlists for you</h2><a class="more" href="#/playlists">See all</a></div><div id="plps"></div></div>
@@ -1828,7 +1886,7 @@ async function viewHome(v){
   const [albums, all, pls, genres] = await Promise.all(   // per-call .catch so one failing endpoint degrades that shelf instead of blanking the whole Home page
     [jget("/catalog/albums").catch(()=>[]), jget("/catalog/tracks").catch(()=>[]), jget("/playlists").catch(()=>[]), families()]);
   cache(all);
-  $("#chips").innerHTML = genreChipsHTML(genres, null);
+  $("#chips").innerHTML = genreRailHTML(genres, null);
   // Recently played — your last few tracks, straight from local history (no server, no wait).
   const recent=_lsJSON("sound_recent","[]");
   if(recent.length){ cache(recent);
@@ -1934,8 +1992,8 @@ async function viewGenre(v, g){
     const sub = r.kind==="style"
       ? `A style in <a href="#/genre/${encodeURIComponent(famKey)}">${esc(fam?fam.label:gl(famKey))}</a> · ${n} track${plural} · behavior-informed, never paid placement.`
       : `${n} track${plural} · behavior-informed, never paid placement.`;
-    v.innerHTML=`<div class="chips chips-sticky">${genreChipsHTML(fams, g)}</div>
-      ${styleChipsHTML(fam, r.kind==="style"?g:null)}
+    v.innerHTML=`<div class="chips-sticky">${genreRailHTML(fams, g)}</div>
+      ${styleRailHTML(fam, r.kind==="style"?g:null)}
       <h2 class="section">${esc(label)}</h2><p class="sub">${sub}</p>
       ${n?`<button onclick="playAlbum()">▶ Play all</button>`:""}
       <div style="margin-top:16px">${r.tracks.length?trackRows(r.tracks):`<div class="empty">Nothing in ${esc(label)} yet. The family stays on the shelf; it fills as artists tag their music.</div>`}</div>`;
