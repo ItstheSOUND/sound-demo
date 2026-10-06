@@ -147,15 +147,22 @@
   .rail-wrap{display:flex;align-items:center;gap:6px;margin:0 0 6px;}
   .rail{list-style:none;margin:0;padding:6px;display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x proximity;
         scroll-padding-inline:6px;scrollbar-width:thin;flex:1;min-width:0;}
-  .rail li{flex:0 0 auto;scroll-snap-align:start;}
-  .gcard{display:flex;flex-direction:column;justify-content:center;min-width:128px;min-height:60px;box-sizing:border-box;
-         padding:10px 14px;border-radius:12px;background:var(--card2);color:var(--ink);text-decoration:none;
-         font-weight:700;font-size:.92em;line-height:1.2;}
-  .gcard-n{font-weight:500;font-size:.82em;color:var(--mute);margin-top:3px;}
-  .gcard.on{background:var(--amber);color:#2a1a0c;box-shadow:inset 0 0 0 2px #2a1a0c;}   /* the card in view: its border carries the state, not the amber alone (1.4.11) */
-  .gcard.on .gcard-n{color:#2a1a0c;}
-  .gcard:focus-visible{outline:3px solid var(--focus-ring);outline-offset:-3px;}
-  .rail-styles .gcard{min-width:104px;min-height:48px;font-size:.85em;}
+  .rail li{flex:0 0 auto;scroll-snap-align:start;display:flex;}   /* the card fills its item: one height across a row */
+  /* a card: four artists' art over the genre's own gradient; the ground (set inline) is a near-black scrim over
+     coverBg's gradient, and the text is white on it */
+  /* align-items and gap set here: the sidebar's `nav a` rule would otherwise centre and shrink the card's parts */
+  .gcard{display:flex;flex-direction:column;align-items:stretch;gap:0;width:148px;box-sizing:border-box;padding:8px 8px 10px;border-radius:12px;
+         background-color:#0e0a09;color:#fff;text-decoration:none;font-weight:700;font-size:.92em;line-height:1.2;}
+  .gmosaic{display:grid;grid-template-columns:1fr 1fr;gap:3px;aspect-ratio:1;border-radius:7px;overflow:hidden;margin-bottom:8px;}
+  .gtile{background-size:cover;background-position:center;}
+  .gcard-t,.gcard-n,.gcard-art{display:block;padding:0 3px;}
+  .gcard-n{font-weight:500;font-size:.82em;margin-top:3px;}
+  .gcard-art{font-weight:500;font-size:.72em;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  /* the card in view and the focused card: rings OUTSIDE the card, on the page, where their contrast is known (1.4.11);
+     the row's 6px padding keeps them from being clipped */
+  .gcard.on{box-shadow:0 0 0 2px var(--bg),0 0 0 5px var(--ink);}
+  .gcard:focus-visible{outline:3px solid var(--focus-ring);outline-offset:2px;}
+  .rail-styles .gcard{width:120px;font-size:.85em;}
   .rail-btn{flex:0 0 auto;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--card);
             color:var(--ink);font-size:1.1em;line-height:1;cursor:pointer;padding:0;}
   .rail-btn:focus-visible{outline:3px solid var(--focus-ring);outline-offset:2px;}
@@ -634,7 +641,9 @@
     .grid{grid-template-columns:repeat(2,1fr);}
     .chips .chip{font-size:.92em;padding:8px 14px;}
     .rail-btn{display:none;}                            /* a phone swipes the row; the buttons are for a mouse */
-    .gcard{min-width:116px;min-height:56px;}
+    .gcard{width:136px;}                                /* two and a bit cards across a phone */
+    .rail-styles .gcard{width:112px;}
+    .chips-sticky{position:static;}                     /* the taller cards would pin a quarter of the screen */
     .cardv{width:46vw;max-width:210px;}                 /* bigger cards to swipe through */
     .cardv.featured{width:100%;max-width:none;grid-template-columns:120px minmax(0,1fr);column-gap:12px;}
     .cardv.featured .cover{height:120px;}
@@ -1830,7 +1839,11 @@ function npGo(){ if(current && current.artist_id){ go("#/artist/"+encodeURICompo
 function railHTML(id, label, items, extra){
   return `<nav class="rail-wrap${extra?' '+extra:''}" aria-label="${esc(label)}">`
     + `<button type="button" class="rail-btn" aria-controls="${id}" aria-label="Scroll ${esc(label.toLowerCase())} left" onclick="railScroll(this,-1)">‹</button>`
-    + `<ul class="rail" id="${id}" role="list">` + items.map(it=>`<li><a class="gcard${it.on?' on':''}" href="${it.href}"${it.on?' aria-current="page"':''}>${esc(it.label)}<span class="gcard-n">${esc(it.note)}</span></a></li>`).join("") + `</ul>`
+    + `<ul class="rail" id="${id}" role="list">` + railAssign(items).map(it=>`<li><a class="gcard${it.on?' on':''}" href="${it.href}"${it.on?' aria-current="page"':''} style="${railGround(it.key)}">`
+      + `<span class="gmosaic" aria-hidden="true">${[0,1,2,3].map(i=>railTile(it.key, it.tiles[i], i)).join("")}</span>`
+      + `<span class="gcard-t">${esc(it.label)}</span><span class="gcard-n">${esc(it.note)}</span>`
+      + (it.tiles.length?`<span class="gcard-art">Art: ${esc(it.tiles.map(x=>x.artist||x.artist_id).join(", "))}</span>`:"")
+      + `</a></li>`).join("") + `</ul>`
     + `<button type="button" class="rail-btn" aria-controls="${id}" aria-label="Scroll ${esc(label.toLowerCase())} right" onclick="railScroll(this,1)">›</button></nav>`;
 }
 function railScroll(btn, dir){
@@ -1860,18 +1873,53 @@ function railFocus(e){
   if(b.left < rr.left || b.right > rr.right) r.scrollLeft=Math.max(0, a.parentElement.offsetLeft-r.offsetLeft-6);
 }
 document.addEventListener("focusin", railFocus);
+// Four artists' art for each card of a rail, in one pass. The cards go in rail order with All last (it takes what
+// the genres leave); each walks its own artists with art, sorted by id, from a start that moves one place per UTC
+// day (offset per genre, so the cards don't all turn together), and takes the next four not on an earlier card.
+// Every artist in a genre takes an equal turn at the front; no plays or popularity weigh in (Art. V: placement is
+// listener behavior and editorial judgment, and an equal turn is the editorial rule); no artist shows twice in a
+// rail; the same all day, on every reload. `day` lets a test pin it.
+function railAssign(items, day){
+  const d=day==null?Math.floor(Date.now()/864e5):day, used=new Set();
+  items.filter(it=>it.key!=="all").concat(items.filter(it=>it.key==="all")).forEach(it=>{
+    const a=[...new Map((it.art||[]).filter(x=>x&&x.artist_id&&safeImg(x.artwork_url)).map(x=>[x.artist_id, x])).values()]
+      .sort((x,y)=>x.artist_id<y.artist_id?-1:x.artist_id>y.artist_id?1:0);
+    let h=0; const k=String(it.key); for(let i=0;i<k.length;i++) h=(h*31+k.charCodeAt(i))|0;
+    const o=a.length?(d+Math.abs(h))%a.length:0;
+    it.tiles=[];
+    for(const x of a.slice(o).concat(a.slice(0,o))){ if(it.tiles.length===4) break;
+      if(!used.has(x.artist_id)){ used.add(x.artist_id); it.tiles.push(x); } }
+  });
+  return items;
+}
+// An image URL for a CSS url(): safeImg's schemes only, and the characters that could close the url() or the
+// declaration (quotes, parentheses, backslash, whitespace) percent-encoded, so an artist's URL can't write CSS.
+function cssImg(u){ const s=safeImg(u); return s ? s.replace(/['"()\\\s]/g, c=>"%"+c.charCodeAt(0).toString(16).padStart(2,"0")) : ""; }
+// the card's ground: a scrim over the playlist cards' own gradient for this genre; a tile: the artist's art, or a
+// gradient of the genre's own if there are fewer than four artists
+function railGround(key){
+  return esc("background-image:linear-gradient(rgba(14,10,9,.62),rgba(14,10,9,.62)),"+coverBg({id:"genre:"+key}));
+}
+function railTile(key, art, i){
+  const u=art?cssImg(art.artwork_url):"";
+  return `<span class="gtile" style="${esc("background-image:"+(u?`url("${u}")`:coverBg({id:"genre:"+key+":"+i})))}"></span>`;
+}
 function genreRailHTML(families, active){
   const n=c=>`${c} track${c===1?'':'s'}`;
-  return railHTML("rail-genres", "Genres", [{href:"#/", label:"All", note:"Everything", on:!active}]
-    .concat((families||[]).map(f=>({href:"#/genre/"+encodeURIComponent(f.key), label:f.label, note:n(f.count||0),
-      on:f.key===active||(f.styles||[]).some(s=>s.key===active)}))));
+  // a genre with nothing in it is not shown, unless it's the one in view
+  return railHTML("rail-genres", "Genres", [{href:"#/", key:"all", label:"All", note:"Everything", on:!active,
+      art:(families||[]).flatMap(f=>f.art||[])}]
+    .concat((families||[]).map(f=>({href:"#/genre/"+encodeURIComponent(f.key), key:f.key, label:f.label, note:n(f.count||0),
+      on:f.key===active||(f.styles||[]).some(s=>s.key===active), count:f.count||0, art:f.art}))
+      .filter(it=>it.count>0||it.on)));
 }
 // Under a family: the styles at least one track carries, and only those (the
 // taxonomy's rule 3), each with its count.
 function styleRailHTML(fam, active){
   if(!fam || !(fam.styles||[]).length) return "";
-  return railHTML("rail-styles", "Styles in "+fam.label, fam.styles.map(s=>({href:"#/genre/"+encodeURIComponent(s.key),
-    label:s.label, note:`${s.count} track${s.count===1?'':'s'}`, on:s.key===active})), "rail-styles chips-styles");
+  return railHTML("rail-styles", "Styles in "+fam.label, fam.styles.filter(s=>s.count>0||s.key===active)
+    .map(s=>({href:"#/genre/"+encodeURIComponent(s.key), key:s.key, label:s.label, note:`${s.count} track${s.count===1?'':'s'}`,
+      on:s.key===active, art:s.art})), "rail-styles chips-styles");
 }
 async function viewHome(v){
   v.innerHTML = `<div class="hero"><h1>Music that pays its makers</h1><p>Your subscription reaches the artists you actually played — not a chart. Hit play, and watch exactly where the money goes.</p><p class="sub" style="margin:10px 0 0">${DEMO_FICTION}</p></div>
