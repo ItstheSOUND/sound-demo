@@ -900,7 +900,8 @@
 
 <dialog id="leave" aria-labelledby="leaveH">
   <h3 id="leaveH" data-brand="You're leaving {b}">You're leaving SOUND</h3>
-  <p>This link opens <b id="leaveTo"></b> in a new tab. <span data-brand="{b} doesn't run that site.">SOUND doesn't run that site.</span></p>
+  <p id="leaveWeb">This link opens <b id="leaveTo"></b> in a new tab. <span data-brand="{b} doesn't run that site.">SOUND doesn't run that site.</span></p>
+  <p id="leaveMail" hidden>This link opens your email app to write to <b id="leaveMailTo"></b>.</p>
   <div style="display:flex;gap:8px;justify-content:flex-end"><button class="ghost" onclick="leaveStay()">Stay</button><button onclick="leaveGo()">Open the link</button></div>
 </dialog>
 
@@ -1247,8 +1248,10 @@
     if(m==="PUT" && (x=p.match(/^\/artists\/([^/]+)\/first-listeners\/switch$/))){ const k="/artists/"+dec(x[1])+"/first-listeners";
       (GET[k]=GET[k]||{on:false, first_listeners:[]}).on=!!b.on; return resp({ok:true}); }
     if(m==="PUT" && (x=p.match(/^\/artists\/([^/]+)\/links$/))){ const out=[];
-      for(const e of (b.links||[])){ const host=_httpsHost(e.url);
-        if(!host) return resp({detail:`The link "${e.label}" must be a plain https:// address`},400);
+      for(const e of (b.links||[])){ const mail=e.kind==="email", host=mail?"":_httpsHost(e.url);
+        if(mail && (String(e.url).length>254 || String(e.url).split("@")[0].length>64 || safeMail(e.url)!==e.url))
+          return resp({detail:`The link "${e.label}" needs an email address, like name@example.com`},400);
+        if(!mail && !host) return resp({detail:`The link "${e.label}" must be a plain https:// address`},400);
         out.push({link_id:e.link_id||_cid("ln"), kind:e.kind, label:e.label, url:e.url, domain:host}); }
       GET["/artists/"+dec(x[1])+"/links"]={links:out}; return resp({ok:true}); }
     return null;
@@ -2697,11 +2700,17 @@ const CLUB_REACTIONS=[["heart","♥","Love"],["fire","🔥","Fire"],["tears","�
 // How many first listeners an artist sees (sound_scenarios.FIRST_LISTENERS_MAX, held equal by test_fan_views).
 const FIRST_LISTENERS_SHOWN=50;
 // The kinds of link an artist may add (schemas.ArtistLinkIn, held equal by test_fan_views).
-const LINK_KINDS={site:"Website",store:"Store",bandcamp:"Bandcamp",tickets:"Tickets",shows:"Shows",social:"Social"};
-// An artist's links: each opens in a new tab, after the notice that it leaves the service (leaveFor).
+const LINK_KINDS={site:"Website",store:"Store",tickets:"Tickets",shows:"Shows",social:"Social",email:"Email"};
+// A plain email address, the server's own test (community.email_address), else "".
+function safeMail(a){ const s=String(a==null?"":a).trim();
+  return /^[A-Za-z0-9_+-]+(\.[A-Za-z0-9_+-]+)*@([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}$/.test(s)?s:""; }
+// An artist's links: each opens in a new tab, or an email link the visitor's email app, after the notice that it
+// leaves the service (leaveFor).
 function artistLinksHTML(links){
   if(!(links||[]).length) return "";
-  return `<ul class="alinks">`+links.map(l=>{ const u=safeUrl(l.url); return u?`<li><a href="${esc(u)}" target="_blank" rel="noopener noreferrer" data-domain="${esc(l.domain)}" onclick="return leaveFor(event,this)">${esc(l.label)}<span class="sr-only"> (${esc(LINK_KINDS[l.kind]||l.kind)}, opens ${esc(l.domain)} in a new tab)</span></a></li>`:""; }).join("")+`</ul>`;
+  return `<ul class="alinks">`+links.map(l=>{
+    if(l.kind==="email"){ const m=safeMail(l.url); return m?`<li><a href="mailto:${esc(m)}" data-mail="${esc(m)}" onclick="return leaveFor(event,this)">${esc(l.label)}<span class="sr-only"> (Email, opens your email app)</span></a></li>`:""; }
+    const u=safeUrl(l.url); return u?`<li><a href="${esc(u)}" target="_blank" rel="noopener noreferrer" data-domain="${esc(l.domain)}" onclick="return leaveFor(event,this)">${esc(l.label)}<span class="sr-only"> (${esc(LINK_KINDS[l.kind]||l.kind)}, opens ${esc(l.domain)} in a new tab)</span></a></li>`:""; }).join("")+`</ul>`;
 }
 // The club room on an artist's page. c: {artist_id, name, state ("member", "visitor" or "gated"), gate, threads,
 // featured, firstOn, preview}. In the app the state comes from the doors (a member reads the room, anyone else reads
@@ -2789,13 +2798,19 @@ function studioClubHTML(s){
     +`<label for="thTitle">Title</label><input id="thTitle" type="text" maxlength="120"><label for="thBody">What you want to say</label><textarea id="thBody" rows="4" maxlength="5000"></textarea><div><button onclick="clubOpenThread()">Open the thread</button></div></div>`
     +`<h4>Your threads</h4>${thr}<h4>Notes from members</h4>${notes}<h4>Reports</h4>${reports}<h4>First listeners</h4>${fl}<h4>Your links</h4>${links}</div>`;
 }
-function linkRowHTML(l){ return `<div class="linkrow"><select aria-label="Kind of link">`+Object.entries(LINK_KINDS).map(([k,v])=>`<option value="${k}"${l.kind===k?" selected":""}>${v}</option>`).join("")+`</select>`
-  +`<input type="text" aria-label="Label" maxlength="60" value="${esc(l.label)}" placeholder="label"><input type="url" aria-label="Address, starting https://" value="${esc(l.url)}" placeholder="https://">`
+function linkRowHTML(l){ return `<div class="linkrow"><select aria-label="Kind of link" onchange="linkKind(this)">`+Object.entries(LINK_KINDS).map(([k,v])=>`<option value="${k}"${l.kind===k?" selected":""}>${v}</option>`).join("")+`</select>`
+  +`<input type="text" aria-label="Label" maxlength="60" value="${esc(l.label)}" placeholder="label"><input ${linkAddrAttrs(l.kind)} value="${esc(l.url)}">`
   +`<button class="ghost mini" onclick="this.parentNode.remove()">Remove</button></div>`; }
+// The address field for a kind of link: a plain address for an email link, an https:// one for every other.
+function linkAddrAttrs(kind){ return kind==="email"?`type="email" aria-label="Email address" placeholder="name@example.com"`:`type="url" aria-label="Address, starting https://" placeholder="https://"`; }
+function linkKind(sel){ const i=sel.parentNode.querySelectorAll("input")[1]; i.outerHTML=`<input ${linkAddrAttrs(sel.value)} value="${esc(i.value)}">`; }
 // ---- the club's I/O: each page's own (the app calls the doors; the demo simulates in the page) ----
 let _club=null, _thread=null;
-function leaveFor(e,a){ e.preventDefault(); const d=$("#leave"); $("#leaveTo").textContent=a.dataset.domain; d.dataset.href=a.href; d.showModal(); return false; }
-function leaveGo(){ const d=$("#leave"); window.open(d.dataset.href,"_blank","noopener,noreferrer"); d.close(); }
+function leaveFor(e,a){ e.preventDefault(); const d=$("#leave"), m=a.dataset.mail||"";
+  $("#leaveWeb").hidden=!!m; $("#leaveMail").hidden=!m; $("#leaveTo").textContent=a.dataset.domain||""; $("#leaveMailTo").textContent=m;
+  d.dataset.href=a.href; d.dataset.mail=m; d.showModal(); return false; }
+// A mailto: hands off to the email app in place; a web link opens in a new tab.
+function leaveGo(){ const d=$("#leave"); if(d.dataset.mail) location.href=d.dataset.href; else window.open(d.dataset.href,"_blank","noopener,noreferrer"); d.close(); }
 function leaveStay(){ $("#leave").close(); }
 async function clubCall(method, path, body, asArtist){
   const h=asArtist?artistHeaders(Object.assign({"content-type":"application/json"}, await art2faHeader())):authHeaders({"content-type":"application/json"});
