@@ -2781,7 +2781,7 @@ async function clubCall(method, path, body, asArtist){
 async function fillLinks(id){ const el=$("#alinks"); if(!el) return;
   try{ el.innerHTML=artistLinksHTML((await jget("/artists/"+encodeURIComponent(id)+"/links")).links); }catch(e){} }
 // The demo's line under every club surface a visitor can write in (the brief: writes are simulated in the page).
-const CLUB_DEMO_NOTE=`<p class="sub">In this demo, what you post or change here stays in this page. In the live app, the club opens after the security and legal review.</p>`;
+const CLUB_DEMO_NOTE=`<p class="sub">In this demo, what you post or change here stays in this page. When ${esc(BRAND.name)} launches, fan clubs open only after a security and legal review.</p>`;
 async function fillClub(id, name){
   const el=$("#club"); if(!el) return;
   _club={artist_id:id, name, state:"visitor", gate:"", threads:[], featured:[], firstOn:false, preview:!!window.__SOUND_DEMO__};
