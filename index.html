@@ -240,6 +240,9 @@
   .shelfwrap.atend::after{opacity:0;}
   .cardv{width:176px;flex:0 0 auto;cursor:pointer;border-radius:12px;}
   .cardv .cover{position:relative;height:176px;border-radius:12px;overflow:hidden;}
+  /* a genre card's cover: four tiles, an even 2x2 grid at the cover's own size, drawn in CSS so they are crisp at any density */
+  .cover .mosaic{position:absolute;inset:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:3px;}
+  .cover .mosaic span,.cover .mosaic img{display:block;width:100%;height:100%;object-fit:cover;}
   .cardv .cover .bg{position:absolute;inset:0;}
   .cardv .cover img{width:100%;height:100%;object-fit:cover;}
   /* Featured (an artist's own release on their page): the card spans the column,
@@ -1632,15 +1635,28 @@ function followArtist(id, btn){
 
 // ---- covers + cards ----
 function covId(o){ return String((o&&(o.album_id||o.playlist_id||o.track_id||o.artist_id||o.id||o.title))||"x"); }
-function coverBg(o){
-  const s=covId(o); let h=0; for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0; h=Math.abs(h);
-  const pairs=[["#c98a4e","#3a201c"],["#2b6cb0","#14243a"],["#b7786c","#4a2e3f"],["#6f4a86","#2b6cb0"],
+// The generic cover palette: every playlist cover picks a pair by its id, and a genre card's four tiles take four.
+const COVER_PAIRS=[["#c98a4e","#3a201c"],["#2b6cb0","#14243a"],["#b7786c","#4a2e3f"],["#6f4a86","#2b6cb0"],
     ["#eba15e","#7a4a20"],["#3f7d86","#132a2f"],["#8a5a52","#2b6cb0"],["#7fa9cf","#2b6cb0"],
     ["#b7786c","#6b3b52"],["#5a6f86","#14243a"],["#a9724e","#2b6cb0"],["#4a6b52","#14231a"]];
-  const p=pairs[h%pairs.length]; const ang=120+(Math.floor(h/7)%80);
+function coverBg(o){
+  const s=covId(o); let h=0; for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0; h=Math.abs(h);
+  const p=COVER_PAIRS[h%COVER_PAIRS.length]; const ang=120+(Math.floor(h/7)%80);
   return `linear-gradient(${ang}deg,${p[0]},${p[1]})`;
 }
-function coverInner(o){ return o&&o.artwork_url ? `<img src="${esc(safeImg(o.artwork_url))}" alt="">` : `<span class="bg" style="background:${coverBg(o)}"></span>`; }
+// An artist's own colour pair, the same on every card: the cover hash of its id against the cover palette.
+function artistPair(id){ let h=0; const s=String(id); for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0; return COVER_PAIRS[Math.abs(h)%COVER_PAIRS.length]; }
+// A card spanning two or more artists (its `artists`, chosen by the API) draws four tiles in a 2x2 grid (Mark, 10/7:
+// "any card with multiple artists"): tile i is that artist's own image (photo_url) when it has one, else the artist's own colour, else,
+// past the last artist, the card's own gradient, so no tile is ever empty. One artist or none: the single cover.
+function coverInner(o){
+  const a=(o&&o.artists)||[];
+  if(a.length>1) return `<span class="mosaic" aria-hidden="true">${[0,1,2,3].map(i=>{ const t=a[i];
+    if(t&&t.photo_url) return `<img src="${esc(safeImg(t.photo_url))}" alt="">`;
+    const bg=t?(p=>`linear-gradient(135deg,${p[0]},${p[1]})`)(artistPair(t.artist_id)):coverBg(o);
+    return `<span style="background:${bg}"></span>`; }).join("")}</span>`;
+  return o&&o.artwork_url ? `<img src="${esc(safeImg(o.artwork_url))}" alt="">` : `<span class="bg" style="background:${coverBg(o)}"></span>`;
+}
 function zoomSvg(){ return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>`; }
 // Big, art-forward, clickable cover for the album/track detail hero. `o` carries the same
 // id the page uses (album_id / track_id), so the gradient (or image) matches everywhere.
@@ -1665,7 +1681,8 @@ async function taxonomy(){ if(_tax) return _tax;
   (_tax.families||[]).forEach(f=>{ _taxLabel[f.key]=f.label; (f.styles||[]).forEach(s=>{ _taxLabel[s.key]=s.label; }); });
   return _tax; }
 function gl(key){ return _taxLabel[key] || cap(String(key||"")); }
-async function families(){ try{ return ((await jget("/catalog/genres")).families)||[]; }catch(e){ return []; } }
+// The families, carrying the response's `all` (the All card's artists, chosen by the API) on the array.
+async function families(){ try{ const r=await jget("/catalog/genres"), f=r.families||[]; f.all=r.all||null; return f; }catch(e){ return []; } }
 function playSvg(){ return `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>`; }
 function pauseSvg(){ return `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>`; }
 function thumbSvg(){ return `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 21h4V9H2v12zm19.83-7.12c.11-.25.17-.52.17-.8V11c0-1.1-.9-2-2-2h-5.5l.92-4.65c.05-.22.02-.46-.08-.66-.23-.45-.52-.86-.88-1.22L14 2 7.59 8.41C7.21 8.79 7 9.3 7 9.83v7.84C7 18.95 8.05 20 9.34 20h8.11c.7 0 1.36-.37 1.72-.97l2.66-5.15z"/></svg>`; }
@@ -1696,13 +1713,13 @@ function plSub(p){
   return "Playlist · "+tt;
 }
 function plBadge(p){ return (p.owner && creds().sub && p.owner===creds().sub) ? "Yours" : ""; }
-function plCard(p){ return card({href:"#/playlist/"+encodeURIComponent(p.playlist_id), title:p.title, subtitle:plSub(p), cover:{playlist_id:p.playlist_id,title:p.title}, badge:plBadge(p), playKind:"playlist", playId:p.playlist_id}); }
+function plCard(p){ return card({href:"#/playlist/"+encodeURIComponent(p.playlist_id), title:p.title, subtitle:plSub(p), cover:{playlist_id:p.playlist_id,title:p.title,artists:p.artists}, badge:plBadge(p), playKind:"playlist", playId:p.playlist_id}); }
 // An artist's own playlist card (their work + inspirations), for the artist page + superfan shelf.
 function plArtCard(p, artistName){ return card({href:"#/playlist/"+encodeURIComponent(p.playlist_id), title:p.title,
   subtitle:"By "+(artistName||p.artist_name||"the artist")+" · "+((p.track_count||0)+" track"+((p.track_count===1)?'':'s')),
-  cover:{playlist_id:p.playlist_id,title:p.title}, playKind:"playlist", playId:p.playlist_id}); }
-function newCard(){ return card({href:"#/new", title:"New on "+BRAND.name, subtitle:"Discovery · new artists", cover:{id:"new-on-sound"}, playKind:"new", playId:"new"}); }
-function genreCards(list, all){ return shelf(list.filter(f=>f.count).map(f=>card({href:"#/genre/"+encodeURIComponent(f.key), title:f.label, subtitle:"Family mix · "+f.count, cover:{id:"genre:"+f.key}, playKind:"genre", playId:f.key})), all); }
+  cover:{playlist_id:p.playlist_id,title:p.title,artists:p.artists}, playKind:"playlist", playId:p.playlist_id}); }
+function newCard(nw){ return card({href:"#/new", title:"New on "+BRAND.name, subtitle:"Discovery · new artists", cover:{id:"new-on-sound", artists:(nw||{}).artists}, playKind:"new", playId:"new"}); }
+function genreCards(list, all){ return shelf(list.filter(f=>f.count).map(f=>card({href:"#/genre/"+encodeURIComponent(f.key), title:f.label, subtitle:"Family mix · "+f.count, cover:{id:"genre:"+f.key, artists:f.artists}, playKind:"genre", playId:f.key})), all); }
 // A card's own PLAY button: toggle in place. If this exact collection is the one
 // loaded and playing, pause/resume it; otherwise start it. Never navigates (the card
 // BODY is the link) and never restarts a collection that's already the active queue.
@@ -1836,7 +1853,7 @@ function railHTML(id, label, items, extra){
   return `<nav class="rail-wrap${extra?' '+extra:''}" aria-label="${esc(label)}">`
     + `<button type="button" class="rail-btn" aria-controls="${id}" aria-label="Scroll ${esc(label.toLowerCase())} left" onclick="railScroll(this,-1)">‹</button>`
     + `<ul class="rail" id="${id}" role="list">` + items.map(it=>`<li>${card({href:it.href, title:it.label, subtitle:it.note,
-      cover:{id:"genre:"+it.key}, playKind:it.key==="all"?null:"genre", playId:it.key, current:it.on})}</li>`).join("") + `</ul>`
+      cover:{id:"genre:"+it.key, artists:it.artists}, playKind:it.key==="all"?null:"genre", playId:it.key, current:it.on})}</li>`).join("") + `</ul>`
     + `<button type="button" class="rail-btn" aria-controls="${id}" aria-label="Scroll ${esc(label.toLowerCase())} right" onclick="railScroll(this,1)">›</button></nav>`;
 }
 function railScroll(btn, dir){
@@ -1871,9 +1888,10 @@ document.addEventListener("focusin", railFocus);
 function genreRailHTML(families, active){
   const n=c=>`${c} track${c===1?'':'s'}`;
   // a genre with nothing in it is not shown, unless it's the one in view
-  return railHTML("rail-genres", "Genres", [{href:"#/", key:"all", label:"All", note:"Everything", on:!active}]
+  return railHTML("rail-genres", "Genres", [{href:"#/", key:"all", label:"All", note:"Everything", on:!active,
+      artists:((families||{}).all||{}).artists}]
     .concat((families||[]).map(f=>({href:"#/genre/"+encodeURIComponent(f.key), key:f.key, label:f.label, note:n(f.count||0),
-      on:f.key===active||(f.styles||[]).some(s=>s.key===active), count:f.count||0}))
+      on:f.key===active||(f.styles||[]).some(s=>s.key===active), count:f.count||0, artists:f.artists}))
       .filter(it=>it.count>0||it.on)));
 }
 // Under a family: the styles at least one track carries, and only those (the
@@ -1882,20 +1900,26 @@ function styleRailHTML(fam, active){
   if(!fam || !(fam.styles||[]).length) return "";
   return railHTML("rail-styles", "Styles in "+fam.label, fam.styles.filter(s=>s.count>0||s.key===active)
     .map(s=>({href:"#/genre/"+encodeURIComponent(s.key), key:s.key, label:s.label,
-      note:`${s.count} track${s.count===1?'':'s'}`, on:s.key===active})), "rail-styles chips-styles");
+      note:`${s.count} track${s.count===1?'':'s'}`, on:s.key===active, artists:s.artists})), "rail-styles chips-styles");
 }
-async function viewHome(v){
-  v.innerHTML = `<div class="hero"><h1>Music that pays its makers</h1><p>Your subscription reaches the artists you actually played — not a chart. Hit play, and watch exactly where the money goes.</p><p class="sub" style="margin:10px 0 0">${DEMO_FICTION}</p></div>
+// Home's sections under the hero, in their order (a parity unit, the same on both pages): Playlists for you first,
+// then the genre row (the Chief Adviser's call on Mark's "we should feature playlists", 10/7). The DOM order is the
+// visual order and the keyboard order (2.4.3); nothing reorders them in CSS.
+function homeSections(){
+  return `
+    <div class="sec"><div class="head"><h2 class="section">Playlists for you</h2><a class="more" href="#/playlists">See all</a></div><div id="plps"></div></div>
     <div id="chips"></div>
     <div id="rcnt" class="sec"></div>
     <div id="bqp" class="sec"></div>
-    <div class="sec"><div class="head"><h2 class="section">Playlists for you</h2><a class="more" href="#/playlists">See all</a></div><div id="plps"></div></div>
     <div id="sfp" class="sec"></div>
     <div class="sec"><div class="head"><h2 class="section">Songs for you</h2><button class="more" onclick="shuffleAll()">Shuffle all</button></div><div id="songs"></div></div>
     <div class="sec"><div class="head"><h2 class="section">Albums</h2></div><div id="albs"></div></div>
     <div class="sec"><div class="head"><h2 class="section">Genre playlists</h2><a class="more" href="#/playlists">See all</a></div><div id="gens"></div></div>`;
-  const [albums, all, pls, genres] = await Promise.all(   // per-call .catch so one failing endpoint degrades that shelf instead of blanking the whole Home page
-    [jget("/catalog/albums").catch(()=>[]), jget("/catalog/tracks").catch(()=>[]), jget("/playlists").catch(()=>[]), families()]);
+}
+async function viewHome(v){
+  v.innerHTML = `<div class="hero"><h1>Music that pays its makers</h1><p>Your subscription reaches the artists you actually played — not a chart. Hit play, and watch exactly where the money goes.</p><p class="sub" style="margin:10px 0 0">${DEMO_FICTION}</p></div>` + homeSections();
+  const [albums, all, pls, genres, nw] = await Promise.all(   // per-call .catch so one failing endpoint degrades that shelf instead of blanking the whole Home page
+    [jget("/catalog/albums").catch(()=>[]), jget("/catalog/tracks").catch(()=>[]), jget("/playlists").catch(()=>[]), families(), jget("/catalog/new").catch(()=>({}))]);
   cache(all);
   $("#chips").innerHTML = genreRailHTML(genres, null);
   // Recently played — your last few tracks, straight from local history (no server, no wait).
@@ -1921,7 +1945,7 @@ async function viewHome(v){
   const mineIds=new Set(mine.map(p=>p.playlist_id));
   const curated=pls.filter(p=>p.curated);
   const community=pls.filter(p=>p.owner && !mineIds.has(p.playlist_id) && !p.curated);
-  const plCards=[...mine.map(plCard), ...curated.map(plCard), newCard(), ...community.map(plCard)];
+  const plCards=[...mine.map(plCard), ...curated.map(plCard), newCard(nw), ...community.map(plCard)];
   $("#plps").innerHTML = plCards.length ? shelf(plCards) : `<div class="empty">No playlists yet.</div>`;
   // From artists you love — playlists made by the artists you're a superfan of (by plays).
   if(creds().sub){ try{
@@ -1976,7 +2000,7 @@ async function viewPlaylists(v){
     <div class="sec"><div class="head"><h3 style="color:var(--warm-accent)">From the community</h3></div><div id="hc"></div></div>
     <div class="sec"><div class="head"><h3 style="color:var(--warm-accent)">Discovery</h3></div><div id="hd"></div></div>
     <div class="sec"><div class="head"><h3 style="color:var(--warm-accent)">By family</h3></div><div id="hg"></div></div>`;
-  const [pls, genres] = await Promise.all([jget("/playlists"), families()]);
+  const [pls, genres, nw] = await Promise.all([jget("/playlists"), families(), jget("/catalog/new").catch(()=>({}))]);
   let mine=[]; if(creds().sub){ try{ mine=await jget("/playlists/mine"); }catch(e){} }
   const mineIds=new Set(mine.map(p=>p.playlist_id));
   $("#hy").innerHTML = creds().sub
@@ -1985,7 +2009,7 @@ async function viewPlaylists(v){
   const community=pls.filter(p=>p.owner && !mineIds.has(p.playlist_id) && !p.curated);
   $("#hc").innerHTML = community.length?shelf(community.map(plCard), true):`<div class="empty">No community playlists yet.</div>`;
   const disc=pls.filter(p=>p.curated);
-  $("#hd").innerHTML = shelf([newCard(), ...disc.map(plCard)], true);
+  $("#hd").innerHTML = shelf([newCard(nw), ...disc.map(plCard)], true);
   $("#hg").innerHTML = genres.some(f=>f.count)?genreCards(genres, true):`<div class="empty">Nothing on the shelf yet.</div>`;
 }
 // A family or a style. A family gathers its own tag and every style under it; a
