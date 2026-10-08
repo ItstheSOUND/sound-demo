@@ -2533,7 +2533,7 @@ function videoCard(vd, manage){ const title=esc(vd.title||"Video");
   const price=paid?`<span class="vprice">${vMoney(vd.price)} · a download that's yours to keep, with a collectible ticket</span>`:`<span class="vprice free">Free</span>`;
   const qlink=(vFeatured(vd) && !manage)?` · <a href="#" onclick="reportQuality();return false" style="color:var(--mute)">Quality issue?</a>`:"";
   const tprev=paid?` · <a href="#" onclick='openTicket(${jarg(vd.video_id)});return false' style="color:var(--warm-accent)">${manage?"Preview the ticket":"See the ticket"}</a>`:"";
-  return `<div class="vcell${manage?' vmanage':''}"><div class="vframe">${media}</div><div class="vt">${title}${feat}${hostedTag}</div><div class="vmeta">${price}${qlink}${tprev}</div>${rm}<div class="vdeadnote">Hosted preview clears on reload in the demo — real file hosting is the funded next phase.</div></div>`; }
+  return `<div class="vcell${manage?' vmanage':''}"><div class="vframe">${media}</div><div class="vt">${title}${feat}${hostedTag}</div><div class="vmeta">${price}${qlink}${tprev}</div>${rm}<div class="vdeadnote">Hosted preview clears on reload in the demo. Real file hosting is the next phase.</div></div>`; }
 function buyVideo(id){ toast("Sales open after the security and legal review. A purchase is a download for your personal use, and it's yours to keep. We don't claw back what you bought. Here is a preview of the collectible ticket."); openTicket(id); }
 function reportQuality(){ toast("If a $5 Show falls short on quality, tell us and we'll make it right — shows that don't clear the bar don't stay in the lane."); }
 const SHARE_INTENTS=[
@@ -2626,7 +2626,7 @@ async function uploadVideoFile(input){ const a=artistCreds(); const f=input.file
   const title=($("#vdTitle").value||"").trim()||f.name.replace(/\.[^.]+$/,"");
   const url=URL.createObjectURL(f);
   const r=await apost("/studio/"+encodeURIComponent(a.id)+"/videos",Object.assign({video_id:"vid_"+Date.now().toString(36),title:title,url:url,kind:"hosted"},videoMeta()));
-  toast(r.ok?"Video added — demo preview only; real hosting is the funded next phase":"Couldn't add video"); if(r.ok) route(); }
+  toast(r.ok?"Video added: demo preview only. Real hosting is the next phase":"Couldn't add video"); if(r.ok) route(); }
 async function removeVideo(vid){ const a=artistCreds();
   if(!await confirmAction("Remove this video from your Studio?", "Remove")) return;
   const r=await fetch("/studio/"+encodeURIComponent(a.id)+"/videos/"+encodeURIComponent(vid),{method:"DELETE",headers:artistHeaders()});
