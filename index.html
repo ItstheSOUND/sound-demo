@@ -1103,9 +1103,13 @@
     const b = baseDetail(id); if(!b) return null;
     const d = JSON.parse(JSON.stringify(b)); d.tracks = (d.tracks||[]).slice();
     (store.addl[id]||[]).forEach(tid=>{ if(trackById[tid]) d.tracks.push(trackById[tid]); });
-    d.track_count = d.tracks.length; d.artists = plArtists(d.tracks); return d;
+    d.track_count = d.tracks.length;
+    // the API's answer as given; derived here only for a playlist the visitor made or changed in the page, which the
+    // snapshot has no answer for (Close Path's read, 10/7: one rule, one implementation wherever the server answered)
+    d.artists = (store.created.some(p=>p.playlist_id===id) || (store.addl[id]||[]).length) ? plArtists(d.tracks) : (b.artists||[]);
+    return d;
   }
-  // The platform's rule for a playlist's `artists` (94c9eb5), served here because this shim stands in for the server:
+  // The platform's rule for a playlist's `artists` (94c9eb5), for playlists the visitor changed in the page:
   // the first four distinct artists in track order, each with its name and its own image when it has one.
   function plArtists(tracks){ const o=[], seen=new Set();
     for(const t of tracks||[]){ if(o.length===4) break; if(!t||!t.artist_id||seen.has(t.artist_id)) continue;
@@ -1654,14 +1658,14 @@ function coverBg(o){
 // An artist's own colour pair, the same on every card: the cover hash of its id against the cover palette.
 function artistPair(id){ let h=0; const s=String(id); for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0; return COVER_PAIRS[Math.abs(h)%COVER_PAIRS.length]; }
 // A card spanning two or more artists (its `artists`, chosen by the API) draws four tiles in a 2x2 grid (Mark, 10/7:
-// "any card with multiple artists"): tile i is that artist's own image (photo_url) when it has one, else the artist's own colour, else,
-// past the last artist, the card's own gradient, so no tile is ever empty. One artist or none: the single cover.
+// "any card with multiple artists"), every tile an artist: four fill it in order, three draw A B / C A, two draw
+// A B / B A, the repeat on the diagonal (the Chief Adviser's ruling, 10/7). A tile is the artist's own image (photo_url)
+// when it has one, else the artist's own colour. One artist or none: the single cover, the card's own gradient.
 function coverInner(o){
   const a=(o&&o.artists)||[];
-  if(a.length>1) return `<span class="mosaic" aria-hidden="true">${[0,1,2,3].map(i=>{ const t=a[i];
-    if(t&&t.photo_url) return `<img src="${esc(safeImg(t.photo_url))}" alt="">`;
-    const bg=t?(p=>`linear-gradient(135deg,${p[0]},${p[1]})`)(artistPair(t.artist_id)):coverBg(o);
-    return `<span style="background:${bg}"></span>`; }).join("")}</span>`;
+  if(a.length>1) return `<span class="mosaic" aria-hidden="true">${(a.length===2?[0,1,1,0]:a.length===3?[0,1,2,0]:[0,1,2,3]).map(i=>{ const t=a[i];
+    if(t.photo_url) return `<img src="${esc(safeImg(t.photo_url))}" alt="">`;
+    const p=artistPair(t.artist_id); return `<span style="background:linear-gradient(135deg,${p[0]},${p[1]})"></span>`; }).join("")}</span>`;
   return o&&o.artwork_url ? `<img src="${esc(safeImg(o.artwork_url))}" alt="">` : `<span class="bg" style="background:${coverBg(o)}"></span>`;
 }
 function zoomSvg(){ return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>`; }
