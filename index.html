@@ -2240,7 +2240,7 @@ async function viewStudio(v){
         <div class="lrow em"><span>Your payout, your listeners' fees split by their plays</span><span>${money(earn.payout)}</span></div>
         <div class="lrow"><span>The same streams at the pooled rate, the pool over everyone's plays (${perStream(earn.per_stream_rate)})</span><span>${money(earn.at_average_rate!=null?earn.at_average_rate:Number(earn.qualifying_streams)*Number(earn.per_stream_rate))}</span></div>
       </div>
-      <div class="note">Your payout is your listeners' money: each subscriber's fee is split among the artists that subscriber played, in proportion to their plays, and your share of every one of those splits adds up here. The public <a href="#/transparency">per-stream rate</a> is the pool over everyone's plays, an average, so your figure sits above or below your streams times the rate depending on how much else your listeners play; no deals and no tiers move it. It's private to you; there's no public leaderboard of paychecks. Storefront, fan-club, and show income are separate and go straight to you.</div>
+      <div class="note">Your payout is your listeners' money: each subscriber's fee, after the songwriter share and the bills, is split among the artists that subscriber played, in proportion to their plays, and your share of every one of those splits adds up here. The public <a href="#/transparency">per-stream rate</a> is the pool over everyone's plays, an average, so your figure sits above or below your streams times the rate depending on how much else your listeners play; no deals and no tiers move it. It's private to you; there's no public leaderboard of paychecks. Storefront income goes straight to you. Fan-club income reaches you less only the card-processing cost. Both are separate from your streaming pay. Recorded-show sales open later, on terms we'll publish before they do.</div>
     </div>` : `
     <div class="sec"><div class="head"><h3 style="color:var(--warm-accent)">Streaming payout</h3></div>
       <div class="empty">No streams tallied yet. Once your music is streaming, this shows your payout: your listeners' fees, split by how much of each listener's month was you, with the same streams at the public average rate beside it for comparison.</div>
@@ -2308,7 +2308,7 @@ async function viewStudio(v){
     </div>
 
     <div class="sec"><div class="head"><h3 style="color:var(--warm-accent)">Videos</h3></div>
-      <p class="sub" style="margin:0 0 6px">A music video, a live take, a studio session — your work, only you. Link one now (free, no hosting cost). Uploading a file to ${esc(BRAND.name)} arrives in a later, funded phase; the button below previews that flow.</p>
+      <p class="sub" style="margin:0 0 6px">A music video, a live take, a studio session — your work, only you. Link one now (free, no hosting cost). Uploading a file to ${esc(BRAND.name)} arrives in a later phase; the button below previews that flow.</p>
       ${d.videos&&d.videos.length?`<div class="vgrid">`+d.videos.map(vd=>videoCard(vd,true)).join("")+`</div>`:`<div class="empty">No videos yet.</div>`}
       <details class="addblock"><summary>Add a video</summary>
       <div class="sform">
@@ -2317,7 +2317,7 @@ async function viewStudio(v){
         <div style="display:flex;gap:8px">
           <input id="vdPrice" type="text" placeholder="price (0 = free)" style="width:130px">
         </div>
-        <p class="sub" style="margin:0;font-size:.82em">Charge whatever you want. Recorded shows priced $5 or under are featured in ${esc(BRAND.name)}'s <b style="color:var(--warm-accent)">$5 Shows</b>. Buyers own a purchase permanently — a real download they keep, even if it later comes down — and every purchase comes with a personalized collectible ticket they can share. Shows must be well-produced and properly miked to stay in the lane.</p>
+        <p class="sub" style="margin:0;font-size:.82em">Charge whatever you want. Recorded shows priced $5 or under are featured in ${esc(BRAND.name)}'s <b style="color:var(--warm-accent)">$5 Shows</b>. Every purchase is a download, so a buyer keeps their copy even if the video later comes down. Every purchase also comes with a personalized collectible ticket they can share. Shows must be well-produced and properly miked to stay in the lane.</p>
         <div><button onclick="addVideoLink()">Add video</button></div>
         <label style="font-size:.85em;color:var(--mute);margin-top:6px">Or upload a file — hosting preview <input id="vdFile" type="file" accept="video/*" onchange="uploadVideoFile(this)"></label>
       </div></details>
@@ -2376,7 +2376,7 @@ function publishingRatio(){
     // D is scoped inside the fetch shim; the raw payload is the global.
     const raw=(window.__SOUND_DATA__&&window.__SOUND_DATA__.get&&window.__SOUND_DATA__.get["/transparency/latest"])||{};
     const t=Array.isArray(raw)?(raw[0]||{}):raw, m=t.revenue||{};
-    const rev=Number(m.gross_subscription_revenue||0), pro=Number(m.pro_royalty_deduction||0), pool=Number(m.artist_pool||0);
+    const rev=Number(m.net_subscription_revenue||0), pro=Number(m.pro_royalty_deduction||0), pool=Number(m.artist_pool||0);
     if(!rev||!pro||!pool) return null;
     return {ratio:pro/pool, poolPct:pool/rev*100, proPct:pro/rev*100};
   }catch(e){ return null; }
@@ -2393,7 +2393,7 @@ function renderPublishing(d){
       <span style="flex:1 1 auto;min-width:0">${esc(t.title)}</span>
       <span style="color:var(--mute);font-size:.82em">${w.length?esc(w.map(x=>x.name+" "+x.share+"%").join(", ")):"nobody is registered to collect on this"}</span>
     </div>`;}).join("") : `<div class="empty">No tracks yet.</div>`;
-  const ratioLine = r ? `<div class="note">On this month's published accounting, ${r.poolPct.toFixed(1)}% of a subscription reaches the artist pool and a further ${r.proPct.toFixed(2)}% is songwriter money paid out to the PROs and the MLC. That works out to roughly <b>$${r.ratio.toFixed(2)} of songwriting royalties for every $1.00</b> you earn from streaming here, generated by the very same plays. It goes to whoever is registered to collect it. If that is not you, it is not being held for you.</div>` : "";
+  const ratioLine = r ? `<div class="note">On this month's published accounting, ${r.poolPct.toFixed(1)}% of subscription revenue after refunds reaches the artist pool, and a further ${r.proPct.toFixed(2)}% is songwriter money paid out to the PROs and the MLC. That works out to roughly <b>$${r.ratio.toFixed(2)} of songwriting royalties for every $1.00</b> you earn from streaming here, generated by the very same plays. It goes to whoever is registered to collect it. If that is not you, it is not being held for you.</div>` : "";
   host.innerHTML = `
     <div class="head"><h3 style="color:var(--warm-accent)">Songwriting royalties</h3></div>
     <div class="ledger" style="max-width:640px">${rows}</div>
@@ -2520,7 +2520,7 @@ function videoCard(vd, manage){ const title=esc(vd.title||"Video");
   (window._vcache=window._vcache||{})[vd.video_id]=vd;
   const paid=vd.access==="paid" && Number(vd.price)>0;
   let media;
-  if(paid && !manage){ const label=`Buy ${vMoney(vd.price)} — yours to keep`;
+  if(paid && !manage){ const label=`Buy for ${vMoney(vd.price)}`;
     media=`<div class="vlock"><div class="vlockinner"><div class="vlockic">🔒</div><button class="ghost mini" onclick='buyVideo(${jarg(vd.video_id)})'>${label}</button></div></div>`; }
   else if(vd.kind==="hosted"){ media=`<video controls playsinline src="${esc(vd.url||"")}" onerror="this.closest('.vcell').classList.add('vdead')"></video>`; }
   else if(!vd.url){ media=`<div class="vlock"><div class="vlockinner"><div class="vlockic">▶</div><div class="vlocktext">No preview yet</div></div></div>`; }
@@ -2530,11 +2530,11 @@ function videoCard(vd, manage){ const title=esc(vd.title||"Video");
   const feat=vFeatured(vd)?` <span class="chip founding" style="font-size:.7em">$5 Show</span>`:"";
   const hostedTag=vd.kind==="hosted"?` <span class="chip" style="font-size:.7em">hosted · demo</span>`:"";
   const rm=manage?`<div class="vact"><button class="ghost mini danger" onclick='removeVideo(${jarg(vd.video_id)})' aria-label="Remove ${title}">Remove</button></div>`:"";
-  const price=paid?`<span class="vprice">${vMoney(vd.price)} · yours permanently, with a collectible ticket</span>`:`<span class="vprice free">Free</span>`;
+  const price=paid?`<span class="vprice">${vMoney(vd.price)} · a download that's yours to keep, with a collectible ticket</span>`:`<span class="vprice free">Free</span>`;
   const qlink=(vFeatured(vd) && !manage)?` · <a href="#" onclick="reportQuality();return false" style="color:var(--mute)">Quality issue?</a>`:"";
   const tprev=paid?` · <a href="#" onclick='openTicket(${jarg(vd.video_id)});return false' style="color:var(--warm-accent)">${manage?"Preview the ticket":"See the ticket"}</a>`:"";
   return `<div class="vcell${manage?' vmanage':''}"><div class="vframe">${media}</div><div class="vt">${title}${feat}${hostedTag}</div><div class="vmeta">${price}${qlink}${tprev}</div>${rm}<div class="vdeadnote">Hosted preview clears on reload in the demo — real file hosting is the funded next phase.</div></div>`; }
-function buyVideo(id){ toast("Sales open after the security & legal review — a purchase is yours to keep: permanent download, final sale, personal use. We don't claw back what you bought. Every purchase comes with a collectible ticket; here is a preview."); openTicket(id); }
+function buyVideo(id){ toast("Sales open after the security and legal review. A purchase is a download for your personal use, and it's yours to keep. We don't claw back what you bought. Every purchase comes with a collectible ticket; here is a preview."); openTicket(id); }
 function reportQuality(){ toast("If a $5 Show falls short on quality, tell us and we'll make it right — shows that don't clear the bar don't stay in the lane."); }
 const SHARE_INTENTS=[
   {k:"x",label:"X",href:(u,t)=>"https://twitter.com/intent/tweet?text="+encodeURIComponent(t)+"&url="+encodeURIComponent(u)},
@@ -2612,7 +2612,7 @@ function closeTicket(){ const m=$("#tkmodal"),b=$("#tkback");
 function downloadTicket(){ const svg=window._ticketSVG; if(!svg) return;
   const a=document.createElement("a"); a.href="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);
   a.download=(window._ticketName||"sound-ticket")+".svg"; document.body.appendChild(a); a.click(); a.remove();
-  toast("Ticket downloaded — yours to keep and show off."); }
+  toast("Ticket downloaded. It's yours to keep and show off."); }
 function shareTicketTo(which){ const c=window._ticketShare||{}; const s=SHARE_INTENTS.find(x=>x.k===which); if(!s) return;
   const url=s.href(c.u,c.txt); if(url.slice(0,7)==="mailto:") location.href=url; else window.open(url,"_blank","noopener,noreferrer"); }
 function shareTicket(){ const c=window._ticketShare||{}; if(navigator.share){ navigator.share({title:BRAND.name,text:c.txt,url:c.u}).catch(()=>{}); } }
