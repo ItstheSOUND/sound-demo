@@ -1658,12 +1658,14 @@ function coverBg(o){
 // An artist's own colour pair, the same on every card: the cover hash of its id against the cover palette.
 function artistPair(id){ let h=0; const s=String(id); for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0; return COVER_PAIRS[Math.abs(h)%COVER_PAIRS.length]; }
 // A card spanning two or more artists (its `artists`, chosen by the API) draws four tiles in a 2x2 grid (Mark, 10/7:
-// "any card with multiple artists"), every tile an artist: four fill it in order, three draw A B / C A, two draw
-// A B / B A, the repeat on the diagonal (the Chief Adviser's ruling, 10/7). A tile is the artist's own image (photo_url)
-// when it has one, else the artist's own colour. One artist or none: the single cover, the card's own gradient.
+// "any card with multiple artists"), every artist on it taking equal space: four fill it in order, two draw A B / B A,
+// and three draw A B / C with the card's own gradient as the fourth tile, so none takes half (the Counsel Liaison's
+// read, adopted by the Chief Adviser, 10/7). A tile is the artist's own image (photo_url) when it has one, else the
+// artist's own colour. One artist or none: the single cover, the card's own gradient.
 function coverInner(o){
   const a=(o&&o.artists)||[];
-  if(a.length>1) return `<span class="mosaic" aria-hidden="true">${(a.length===2?[0,1,1,0]:a.length===3?[0,1,2,0]:[0,1,2,3]).map(i=>{ const t=a[i];
+  if(a.length>1) return `<span class="mosaic" aria-hidden="true">${(a.length===2?[0,1,1,0]:a.length===3?[0,1,2,-1]:[0,1,2,3]).map(i=>{ const t=a[i];
+    if(!t) return `<span style="background:${coverBg(o)}"></span>`;
     if(t.photo_url) return `<img src="${esc(safeImg(t.photo_url))}" alt="">`;
     const p=artistPair(t.artist_id); return `<span style="background:linear-gradient(135deg,${p[0]},${p[1]})"></span>`; }).join("")}</span>`;
   return o&&o.artwork_url ? `<img src="${esc(safeImg(o.artwork_url))}" alt="">` : `<span class="bg" style="background:${coverBg(o)}"></span>`;
