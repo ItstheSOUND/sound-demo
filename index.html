@@ -288,6 +288,8 @@
   .arthero .arthint svg{width:17px;height:17px;display:block;}
   .arthero:hover .arthint,.arthero:focus-visible .arthint{opacity:1;}
   .arthero:focus-visible{outline:none;box-shadow:0 0 0 3px var(--focus-ring),0 12px 34px rgba(0,0,0,.30);}
+  /* Phones: the cover takes the column's full width, still square. */
+  @media (max-width:560px){ .arthero{width:100%;} }
   /* Full-size cover lightbox */
   .artdlg{max-width:none;max-height:none;width:auto;background:transparent;border:0;box-shadow:none;padding:0;overflow:visible;}
   .artdlg::backdrop{background:rgba(6,5,4,.88);}
@@ -419,9 +421,14 @@
 
   /* transparency */
   .ledger{max-width:760px;background:transparent;border:0;padding:8px 0;}
-  .lrow{display:flex;justify-content:space-between;padding:12px 6px;border-top:1px solid var(--line);}
+  .lrow{display:flex;justify-content:space-between;gap:16px;padding:12px 6px 12px 0;border-top:1px solid var(--line);}
   .lrow:first-child{border-top:0;}
-  .lrow.em{background:rgba(235,161,94,.14);margin:4px -12px;padding:12px 18px;border-radius:8px;border:0;font-weight:700;color:var(--warm-ink);}
+  .lrow.em{background:rgba(235,161,94,.14);margin:4px -12px;padding:12px 18px 12px 12px;border-radius:8px;border:0;font-weight:700;color:var(--warm-ink);}
+  /* An itemized cost sits one step in under its label, its wrapped lines on the same edge. */
+  .lrow .costitem{padding-left:1em;}
+  #tr .lrow>span:last-child{white-space:nowrap;flex-shrink:0;font-variant-numeric:tabular-nums;}
+  /* One column: wrapped labels get room to breathe, and the band stays inside the page's gutter. */
+  @media (max-width:760px){ .lrow{line-height:1.45;} .lrow.em{margin:4px 0;padding:12px 6px 12px 12px;} }
   .note{max-width:760px;background:var(--card2);border-left:5px solid var(--blue);border-radius:8px;padding:14px 18px;margin-top:18px;color:var(--ink);}
 
   /* player bar */
@@ -2242,7 +2249,7 @@ async function viewStudio(v){
     earnHtml = (earn && Number(earn.qualifying_streams)>0) ? `
     <div class="sec"><div class="head"><h3 style="color:var(--warm-accent)">Streaming payout</h3></div>
       <div class="ledger" style="max-width:520px">
-        ${earn.nature==="illustrative"?`<div style="font-family:'Space Grotesk';font-weight:700;color:var(--warm-accent);padding:12px 6px">The illustrative month, ${SIM_NOTE}</div>`:""}
+        ${earn.nature==="illustrative"?`<div style="font-family:'Space Grotesk';font-weight:700;color:var(--warm-accent);padding:12px 0">The illustrative month, ${SIM_NOTE}</div>`:""}
         <div class="lrow"><span>Your qualifying streams</span><span>${Number(earn.qualifying_streams).toLocaleString(FMT)}</span></div>
         <div class="lrow em"><span>Your payout, your listeners' fees split by their plays</span><span>${money(earn.payout)}</span></div>
         <div class="lrow"><span>The same streams at the pooled rate, the pool over everyone's plays (${perStream(earn.per_stream_rate)})</span><span>${money(earn.at_average_rate!=null?earn.at_average_rate:Number(earn.qualifying_streams)*Number(earn.per_stream_rate))}</span></div>
@@ -3174,16 +3181,16 @@ async function viewTransparency(v){
     ];
     // Why revenue is not the count times the price: the basis, from the payload, under the revenue line.
     const pr=r.pricing||null;
-    const basis=(pr&&r.subscribers&&Number(rev.gross_subscription_revenue)>0)?`<div style="color:var(--mute);font-size:.85em;padding:0 6px 10px">Revenue is not ${Number(r.subscribers).toLocaleString(FMT)} times $${Number(pr.list_price).toFixed(2)}. It is what those subscribers actually pay, founding members at the founding rate and subscribers in countries with an accessible regional price included, which averages $${(Number(rev.gross_subscription_revenue)/Number(r.subscribers)).toFixed(2)} a month.</div>`:"";
-    const costs=(r.operating_costs||[]).map(c=>`<div class="lrow"><span>&nbsp;&nbsp;${esc(c.category)} — ${esc(c.description||"")}</span><span>${money(c.amount)}</span></div>`).join("");
+    const basis=(pr&&r.subscribers&&Number(rev.gross_subscription_revenue)>0)?`<div style="color:var(--mute);font-size:.85em;padding:0 0 10px">Revenue is not ${Number(r.subscribers).toLocaleString(FMT)} times $${Number(pr.list_price).toFixed(2)}. It is what those subscribers actually pay, founding members at the founding rate and subscribers in countries with an accessible regional price included, which averages $${(Number(rev.gross_subscription_revenue)/Number(r.subscribers)).toFixed(2)} a month.</div>`:"";
+    const costs=(r.operating_costs||[]).map(c=>`<div class="lrow"><span class="costitem">${esc(c.category)} — ${esc(c.description||"")}</span><span>${money(c.amount)}</span></div>`).join("");
     const illustrative=r.nature==="illustrative";
     const li=illustrative?(r.listening||null):null;
     // the launch cap's note (the Adviser's wording): did the cap bind this month?
     const capNote=(rev.launch_cost_cap&&otherShare!=null&&passPhrase)?`<div class="note">${Number(rev.launch_fund_payment)>0?`<b>The launch cap bound this month:</b> costs other than ${passPhrase} were ${otherShare.toFixed(1)} percent of revenue, and the launch fund paid the amount above the ${capPct} percent line.`:`<b>The launch cap did not bind this month:</b> costs other than ${passPhrase} were ${otherShare.toFixed(1)} percent of revenue, under the ${capPct} percent line.`}</div>`:"";
     const assumed=(li?`<div class="note"><b>Assumed until the first real month.</b> This illustrative month's plays are ${Number(li.mean).toLocaleString(FMT)} qualifying plays per person, an estimate from 2025 industry data (80 percent interval ${Number(li.interval[0]).toLocaleString(FMT)} to ${Number(li.interval[1]).toLocaleString(FMT)}), so the per-stream rate sits between $${Number(li.rate_low).toFixed(4)} and $${Number(li.rate_high).toFixed(4)} across it. More listening means a lower rate and the same money, because the pool is fixed by revenue and costs; what does not move with listening is the pool per subscriber, $${Number(li.pool_per_sub).toFixed(2)} a month.</div>`:"")+capNote;
-    $("#tr").innerHTML=`<div class="ledger">`+(illustrative?`<div style="font-family:'Space Grotesk';font-weight:700;color:var(--warm-accent);padding:12px 6px">The illustrative month, ${SIM_NOTE}</div>`:"")
+    $("#tr").innerHTML=`<div class="ledger">`+(illustrative?`<div style="font-family:'Space Grotesk';font-weight:700;color:var(--warm-accent);padding:12px 0">The illustrative month, ${SIM_NOTE}</div>`:"")
       + rows.map(([k,val,em],i)=>`<div class="lrow ${em?'em':''}"><span>${k}</span><span>${val}</span></div>`+(i===0?basis:"")).join("")
-      + (costs?`<div style="color:var(--mute);font-size:.85em;padding:12px 6px 2px">Operating costs, itemized</div>`+costs:"")
+      + (costs?`<div style="color:var(--mute);font-size:.85em;padding:12px 0 2px">Operating costs, itemized</div>`+costs:"")
       + `</div>`+assumed+`<div class="note"><b>Public vs. private.</b> The accounting, the per-stream rate, the formula and the engine will be public, so anyone will be able to check the math. Each artist's own earnings stay private to their dashboard — no leaderboard of paychecks.</div>`;
   }catch(e){
     if(e instanceof FigureError){ console.error("transparency: "+e.message+"; the ledger is not shown");
