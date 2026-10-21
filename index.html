@@ -426,9 +426,9 @@
   .lrow.em{background:rgba(235,161,94,.14);margin:4px -12px;padding:12px 18px 12px 12px;border-radius:8px;border:0;font-weight:700;color:var(--warm-ink);}
   /* An itemized cost sits one step in under its label, its wrapped lines on the same edge. */
   .lrow .costitem{padding-left:1em;}
-  #tr .lrow>span:last-child{white-space:nowrap;flex-shrink:0;font-variant-numeric:tabular-nums;}
-  /* One column: wrapped labels get room to breathe, and the band stays inside the page's gutter. */
-  @media (max-width:760px){ .lrow{line-height:1.45;} .lrow.em{margin:4px 0;padding:12px 6px 12px 12px;} }
+  #tr .lrow>span:last-child{flex-shrink:0;font-variant-numeric:tabular-nums;}
+  /* One column: wrapped labels get room to breathe, and the band bleeds only half the gutter so its text stays flush. */
+  @media (max-width:760px){ .lrow{line-height:1.45;} .lrow.em{margin:4px -8px;padding:12px 14px 12px 8px;} }
   .note{max-width:760px;background:var(--card2);border-left:5px solid var(--blue);border-radius:8px;padding:14px 18px;margin-top:18px;color:var(--ink);}
 
   /* player bar */
